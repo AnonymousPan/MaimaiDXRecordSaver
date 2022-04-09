@@ -11,7 +11,8 @@ namespace MaimaiDXRecordSaver
         Advanced,
         Expert,
         Master,
-        ReMaster
+        ReMaster,
+        Unknown = -1
     }
 
     public static class DifficultyEnum
@@ -22,7 +23,7 @@ namespace MaimaiDXRecordSaver
 
         public static string GetName(this Difficulty self)
         {
-            return names[(int)self];
+            return self != Difficulty.Unknown ? names[(int)self] : "Unknown";
         }
 
         private static string[] diffTable = { "diff_basic", "diff_advanced", "diff_expert", "diff_master", "diff_remaster" };
@@ -35,7 +36,7 @@ namespace MaimaiDXRecordSaver
                     return (Difficulty)i;
                 }
             }
-            return Difficulty.Basic;
+            return Difficulty.Unknown;
         }
     }
 
@@ -45,7 +46,8 @@ namespace MaimaiDXRecordSaver
         Hold,
         Slide,
         Touch,
-        Break
+        Break,
+        Unknon = -1
     }
 
     public static class NoteTypeEnum
@@ -56,7 +58,7 @@ namespace MaimaiDXRecordSaver
 
         public static string GetName(this NoteType self)
         {
-            return names[(int)self];
+            return self != NoteType.Unknon ? names[(int)self] : "Unknown";
         }
     }
 
@@ -66,7 +68,8 @@ namespace MaimaiDXRecordSaver
         Perfect,
         Great,
         Good,
-        Miss
+        Miss,
+        Unknown = -1
     }
 
     public enum LevelRating
@@ -84,14 +87,16 @@ namespace MaimaiDXRecordSaver
         SS,
         SSPlus,
         SSS,
-        SSSPlus
+        SSSPlus,
+        Unknown = -1
     }
 
     public static class LevelRatingEnum
     {
         public static LevelRating AchievementToRating(int achievement)
         {
-            if (achievement <= 400000) return LevelRating.D;
+            if (achievement < 0) return LevelRating.Unknown;
+            else if (achievement <= 400000) return LevelRating.D;
             else if (achievement <= 600000) return LevelRating.C;
             else if (achievement <= 700000) return LevelRating.B;
             else if (achievement <= 750000) return LevelRating.BB;
@@ -104,7 +109,8 @@ namespace MaimaiDXRecordSaver
             else if (achievement <= 995000) return LevelRating.SS;
             else if (achievement <= 1000000) return LevelRating.SSPlus;
             else if (achievement <= 1005000) return LevelRating.SSS;
-            else return LevelRating.SSSPlus;
+            else if (achievement <= 1000000) return LevelRating.SSSPlus;
+            else return LevelRating.Unknown;
         }
 
         /*
@@ -120,7 +126,7 @@ namespace MaimaiDXRecordSaver
         };
         public static string GetName(this LevelRating self)
         {
-            return names[(int)self];
+            return self != LevelRating.Unknown ? names[(int)self] : "Unknown";
         }
     }
 
@@ -150,7 +156,8 @@ namespace MaimaiDXRecordSaver
         MatchLevel_21,
         MatchLevel_22,
         MatchLevel_23,
-        MatchLevel_24
+        MatchLevel_24,
+        Unknown = -1
     }
 
     public static class MatchLevelEnum
@@ -173,15 +180,16 @@ namespace MaimaiDXRecordSaver
 
         public static string GetName(this MatchLevel self)
         {
-            return names[(int)self];
+            return self != MatchLevel.Unknown ? names[(int)self] : "Unknown";
         }
 
         public static int GetScore(this MatchLevel self)
         {
-            return scores[(int)self];
+            return  self != MatchLevel.Unknown ? scores[(int)self] : 0;
         }
 
         // TODO: Complete this table!
+        // It is useless now, but I want to keep it (?
         private static string[] matchLevelTable = {
             "", "", "03w7JvyxjH", "", "",
             "", "", "08xS8aqrYG", "09sA8D6X7e", "",
@@ -193,13 +201,16 @@ namespace MaimaiDXRecordSaver
         public static MatchLevel GetMatchLevelFromIconUrl(string iconUrl)
         {
             Regex regex = new Regex("grade_[\\w]+");
-            string str = regex.Match(iconUrl).Value.Substring(6);
-            int i = 0;
-            for (; i < matchLevelTable.Length; i++)
+            string str = regex.Match(iconUrl).Value.Substring(6, 2);
+            int result = -1;
+            if(!int.TryParse(str, out result))
             {
-                if (str == matchLevelTable[i]) break;
+                return MatchLevel.Unknown;
             }
-            return (MatchLevel)(i > 24 ? 0 : i);
+            else
+            {
+                return (MatchLevel)(result > 24 ? -1 : result);
+            }
         }
     }
 
@@ -209,7 +220,8 @@ namespace MaimaiDXRecordSaver
         AllPerfectPlus,
         AllPerfect,
         FullComboPlus,
-        FullCombo
+        FullCombo,
+        Unknown = -1
     }
 
     public static class ComboIconEnum
@@ -220,7 +232,7 @@ namespace MaimaiDXRecordSaver
 
         public static string GetName(this ComboIcon self)
         {
-            return names[(int)self];
+            return self != ComboIcon.Unknown ? names[(int)self] : "Unknown";
         }
     }
 
@@ -230,7 +242,8 @@ namespace MaimaiDXRecordSaver
         FullSyncDXPlus,
         FullSyncDX,
         FullSyncPlus,
-        FullSync
+        FullSync,
+        Unknown = -1
     }
 
     public static class SyncIconEnum
@@ -241,7 +254,7 @@ namespace MaimaiDXRecordSaver
 
         public static string GetName(this SyncIcon self)
         {
-            return names[(int)self];
+            return self != SyncIcon.Unknown ? names[(int)self] : "Unknown";
         }
     }
 
@@ -249,7 +262,8 @@ namespace MaimaiDXRecordSaver
     {
         None,
         Increased,
-        Decreased
+        Decreased,
+        Unknown = -1
     }
 
     public static class RatingChangeEnum
@@ -260,13 +274,14 @@ namespace MaimaiDXRecordSaver
 
         public static string GetName(this RatingChange self)
         {
-            return names[(int)self];
+            return self != RatingChange.Unknown ? names[(int)self] : "?";
         }
     }
 
     public enum RecordSaveMethod
     {
         File,
-        SQLServer
+        SQLServer,
+        Unknown = -1
     }
 }
