@@ -9,7 +9,7 @@ namespace MaimaiDXRecordSaver
 {
     public static class Program
     {
-        public static readonly string Version = "1.0.0";
+        public static readonly string Version = "1.1.0";
         public static ILog Logger = LogManager.GetLogger("Default");
         public static MaimaiDXWebRequester Requester = null;
         public static DataRecorderBase DataRecorder = null;
@@ -23,8 +23,15 @@ namespace MaimaiDXRecordSaver
             try
             {
                 Logger.Info("========Starting Up========");
-                foreach(string str in args)
+                ConfigManager.Init();
+                if (!MusicList.Init()) return;
+                foreach (string str in args)
                 {
+                    if(str.ToUpper() == "-MOVETODB")
+                    {
+                        MoveToDatabase();
+                        return;
+                    }
                     if(str.ToUpper() == "-OFFLINE")
                     {
                         OfflineMode = true;
@@ -37,8 +44,8 @@ namespace MaimaiDXRecordSaver
                     OfflineMode = true;
                     Logger.Info("Offline Mode enabled because the server is closed.");
                 }
-                ConfigManager.Init();
-                if (!MusicList.Init()) return;
+                
+                
                 string sessionID, _t;
                 if (LoadCredential(out sessionID, out _t))
                 {
@@ -64,7 +71,13 @@ namespace MaimaiDXRecordSaver
                 }
                 else
                 {
-                    // TODO: Other DataRecorder
+                    DataRecorderDB rec = new DataRecorderDB();
+                    rec.Server = ConfigManager.Instance.DBServer;
+                    rec.Database = ConfigManager.Instance.DBName;
+                    rec.Username = ConfigManager.Instance.DBUsername;
+                    rec.Password = ConfigManager.Instance.DBPassword;
+                    rec.UseWindowsAuth = ConfigManager.Instance.DBUseWindowsAuth;
+                    DataRecorder = rec;
                 }
                 if (!DataRecorder.Init())
                 {
@@ -201,7 +214,7 @@ namespace MaimaiDXRecordSaver
                                             Console.WriteLine("Local ID " + i.ToString());
                                             if(DataRecorder.IsRecordExists(i))
                                             {
-                                                Console.Write(new MusicRecordSummary(DataRecorder.GetMusicRecord(i)).ToString());
+                                                Console.Write(DataRecorder.GetMusicRecordSummary(i).ToString());
                                             }
                                             else
                                             {
@@ -289,8 +302,11 @@ namespace MaimaiDXRecordSaver
 
         public static void SaveCredential()
         {
-            SaveCredential(Requester.SessionID, Requester.TValue);
-            if(WebPageProxy != null)
+            if(Requester != null)
+            {
+                SaveCredential(Requester.SessionID, Requester.TValue);
+            }
+            if (WebPageProxy != null)
             {
                 lock(WebPageProxy)
                 {
@@ -401,6 +417,47 @@ namespace MaimaiDXRecordSaver
             {
                 Logger.Warn("SaveRecordID: Failed to save music record, index=" + index.ToString());
             }
+        }
+
+        private static void MoveToDatabase()
+        {
+            Logger.Info("Started moving records to database.");
+            DataRecorderDB recDB = new DataRecorderDB();
+            recDB.Server = ConfigManager.Instance.DBServer;
+            recDB.Database = ConfigManager.Instance.DBName;
+            recDB.Username = ConfigManager.Instance.DBUsername;
+            recDB.Password = ConfigManager.Instance.DBPassword;
+            recDB.UseWindowsAuth = ConfigManager.Instance.DBUseWindowsAuth;
+            recDB.Init();
+            DataRecorderFile recFile = new DataRecorderFile();
+            recFile.Init();
+
+            int idMax = recFile.GetLastRecordID();
+            for(int i = 0; i < idMax + 1; i++ )
+            {
+                Console.WriteLine(string.Format("Moving record {0} / {1}.", i, idMax));
+                MusicRecord rec = recFile.GetMusicRecord(i);
+                recDB.SaveMusicRecord(rec);
+
+                /*
+                MusicRecord rec1 = recDB.GetMusicRecord(i);
+                string str1 = rec.ToString();
+                string str2 = rec1.ToString();
+                if(str1 != str2)
+                {
+                    Console.WriteLine("ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                    Console.WriteLine(str1);
+                    Console.WriteLine(str2);
+                }
+                else
+                {
+                    Console.WriteLine("Check OK");
+                }
+                //Console.WriteLine(rec.ToString() == rec1.ToString() ? "Check OK" : "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                */
+            }
+
+            Logger.Info("Records moved to database.");
         }
 
         private static string universeWhen =

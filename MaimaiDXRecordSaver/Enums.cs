@@ -209,6 +209,7 @@ namespace MaimaiDXRecordSaver
             }
             else
             {
+                result -= 1;
                 return (MatchLevel)(result > 24 ? -1 : result);
             }
         }

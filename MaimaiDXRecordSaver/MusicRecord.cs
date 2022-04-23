@@ -35,7 +35,7 @@ namespace MaimaiDXRecordSaver
         public int BaseRating { get; set; } // 底分
         [JsonIgnore]
         public int NewRating { get { return MatchLevelRating + BaseRating; } }
-        public int DeltaMatchLevelRating { get; set; }
+        public int MatchLevelRatingChange { get; set; }
         public MatchLevel NewMatchLevel { get; set; }
         public RatingChange RatingChange { get; set; }
         public int Combo { get; set; }
@@ -56,7 +56,7 @@ namespace MaimaiDXRecordSaver
             str += "Judgements:\n" + Judgements.ToString();
             str += string.Format("Fast: {0} Late: {1}\n", FastCount, LateCount);
             str += string.Format("DX Rating: {0}(Base) + {1}(MatchLevel) = {2}({3})\n", BaseRating, MatchLevelRating, NewRating, RatingChange.GetName());
-            str += string.Format("ΔMatch Level Rating: {0} Current Match Level: {1}\n", DeltaMatchLevelRating, NewMatchLevel.GetName());
+            str += string.Format("Match Level Rating Change: {0} Current Match Level: {1}\n", MatchLevelRatingChange, NewMatchLevel.GetName());
             str += "Characters:\n";
             for(int i = 0; i < 5; i++ )
             {

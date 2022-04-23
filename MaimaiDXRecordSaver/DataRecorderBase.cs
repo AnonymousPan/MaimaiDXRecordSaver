@@ -18,6 +18,11 @@ namespace MaimaiDXRecordSaver
             return GetMusicRecord(GetLastRecordID());
         }
 
+        public MusicRecordSummary GetMusicRecordSummary(int id)
+        {
+            return new MusicRecordSummary(GetMusicRecord(id));
+        }
+
         public int[] GetRecordIndicesNeedToSave(List<MusicRecordSummary> list)
         {
             List<int> indices = new List<int>();

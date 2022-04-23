@@ -75,7 +75,7 @@ namespace MaimaiDXRecordSaver.PageParser
             blockNode = blockNode.SelectSingleNode("./div[@class='playlog_rating_detail_block f_r t_l']");
             HtmlNode node = blockNode.SelectSingleNode("./table[1]/tr[1]/td[2]");
             resultObj.MatchLevelRating = int.Parse(node.SelectSingleNode("./div[1]").InnerText);
-            resultObj.DeltaMatchLevelRating = int.Parse(node.SelectSingleNode("./span[1]").InnerText
+            resultObj.MatchLevelRatingChange = int.Parse(node.SelectSingleNode("./span[1]").InnerText
                 .Trim(new char[] { '(', ')'}).Replace('＋', '+').Replace('－', '-'));
             resultObj.BaseRating = int.Parse(blockNode.SelectSingleNode("./table[1]/tr[2]/td[2]/div[1]").InnerText);
             resultObj.RatingChange = ImageToRatingChange(blockNode.SelectSingleNode(".//img[@class='h_20 f_r']").GetAttributeValue("src", ""));

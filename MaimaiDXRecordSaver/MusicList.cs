@@ -69,6 +69,17 @@ namespace MaimaiDXRecordSaver
                 }
                 entry.BPM = obj["basic_info"]["bpm"].ToObject<float>();
                 entry.IsNewSong = obj["basic_info"]["is_new"].ToObject<bool>();
+                List<JToken> charts = obj["charts"].ToList();
+                for(int i = 0; i < charts.Count; i++ )
+                {
+                    int sum = 0;
+                    List<JToken> numList = charts[i]["notes"].ToList();
+                    for(int j = 0; j < numList.Count; j++ )
+                    {
+                        sum += numList[j].ToObject<int>();
+                    }
+                    entry.NoteCounts[i] = sum;
+                }
                 List.Add(entry);
             }
         }
@@ -119,6 +130,18 @@ namespace MaimaiDXRecordSaver
             return false;
         }
 
+        public MusicListEntry GetMusicEntry(int id)
+        {
+            foreach (MusicListEntry item in List)
+            {
+                if(item.ID == id)
+                {
+                    return item;
+                }
+            }
+            return null;
+        }
+
         public class MusicListEntry
         {
             public string Title { get; set; }
@@ -127,6 +150,7 @@ namespace MaimaiDXRecordSaver
             public float[] InnerLevels { get; set; } = new float[5];
             public float BPM { get; set; }
             public bool IsNewSong { get; set; }
+            public int[] NoteCounts { get; set; } = new int[5];
         }
     }
 }

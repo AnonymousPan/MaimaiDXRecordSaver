@@ -1,0 +1,62 @@
+﻿######################
+# Necessary commands #
+######################
+TableExists
+SELECT OBJECT_ID(@Name, N'U')
+
+#################
+# Create tables #
+#################
+CreateTable_MusicRecords
+CREATE TABLE [dbo].[MusicRecords] ([RecordID] [int] NOT NULL, [MusicID] [smallint] NULL, [Difficulty] [tinyint] NULL, [TrackNo] [tinyint] NULL, [PlayTime] [smalldatetime] NULL, [Ranking] [tinyint] NULL, [Achievement] [int] NULL, [AchievementNewRecord] [bit] NULL, [DXScore] [smallint] NULL, [DXScoreNewRecord] [bit] NULL, [Combo] [smallint] NULL, [ComboIcon] [tinyint] NULL, [Sync] [smallint] NULL, [SyncIcon] [tinyint] NULL, [Fast] [smallint] NULL, [Late] [smallint] NULL, [BaseRating] [smallint] NULL, [MatchLevelRating] [smallint] NULL, [MatchLevelChange] [smallint] NULL, [CurrentMatchLevel] [tinyint] NULL, [RatingChange] [tinyint] NULL) ON [PRIMARY]
+
+CreateTable_Judgements
+CREATE TABLE [dbo].[Judgements] ([RecordID] [int] NOT NULL, [NoteType] [tinyint] NOT NULL, [Critical] [smallint] NULL, [Perfect] [smallint] NULL, [Great] [smallint] NULL, [Good] [smallint] NULL, [Miss] [smallint] NULL) ON [PRIMARY]
+
+CreateTable_Characters
+CREATE TABLE [dbo].[Characters] ([RecordID] [int] NOT NULL, [Slot] [tinyint] NOT NULL, [CharacterID] [char](16) NULL, [Star] [tinyint] NULL, [Level] [smallint] NULL) ON [PRIMARY]
+
+CreateTable_Friends
+CREATE TABLE [dbo].[Friends] ([RecordID] [int] NOT NULL, [Slot] [tinyint] NOT NULL, [Name] [nvarchar](8) NULL, [Difficulty] [tinyint] NULL) ON [PRIMARY]
+
+CreateTable_MatchingResults
+CREATE TABLE [dbo].[MatchingResults] ([RecordID] [int] NOT NULL, [Name] [nvarchar](8) NULL, [DXRating] [smallint] NULL, [MatchLevel] [tinyint] NULL, [Achievement] [int] NULL, [Result] [tinyint] NULL) ON [PRIMARY]
+
+##################
+# Other commands #
+##################
+GetLastRecordID
+SELECT MAX([RecordID]) FROM [MusicRecords]
+
+IsRecordExists
+SELECT [RecordID] FROM [MusicRecords] WHERE [RecordID] = @RecordID
+
+ReadBasicInfo
+SELECT * FROM [MusicRecords] WHERE [RecordID] = @RecordID
+
+ReadJudgementsInfo
+SELECT * FROM [Judgements] WHERE [RecordID] = @RecordID
+
+ReadCharactersInfo
+SELECT * FROM [Characters] WHERE [RecordID] = @RecordID ORDER BY [Slot]
+
+ReadFriendsInfo
+SELECT * FROM [Friends] WHERE [RecordID] = @RecordID ORDER BY [Slot]
+
+ReadMatchingInfo
+SELECT TOP(1) * FROM [MatchingResults] WHERE [RecordID] = @RecordID
+
+WriteBasicInfo
+INSERT INTO [MusicRecords] ([RecordID], [MusicID], [Difficulty], [TrackNo], [PlayTime], [Ranking], [Achievement], [AchievementNewRecord], [DXScore], [DXScoreNewRecord], [Combo], [ComboIcon], [Sync], [SyncIcon], [Fast], [Late], [BaseRating], [MatchLevelRating], [MatchLevelChange], [CurrentMatchLevel], [RatingChange]) VALUES (@RecordID, @MusicID, @Difficulty, @TrackNo, @PlayTime, @Ranking, @Achievement, @AchievementNewRecord, @DXScore, @DXScoreNewRecord, @Combo, @ComboIcon, @Sync, @SyncIcon, @Fast, @Late, @BaseRating, @MatchLevelRating, @MatchLevelChange, @CurrentMatchLevel, @RatingChange)
+
+WriteJudgementsInfo
+INSERT INTO [Judgements] ([RecordID], [NoteType], [Critical], [Perfect], [Great], [Good], [Miss]) VALUES (@RecordID, @NoteType, @Critical, @Perfect, @Great, @Good, @Miss)
+
+WriteCharactersInfo
+INSERT INTO [Characters] ([RecordID], [Slot], [CharacterID], [Star], [Level]) VALUES (@RecordID, @Slot, @CharacterID, @Star, @Level)
+
+WriteFriendsInfo
+INSERT INTO [Friends] ([RecordID], [Slot], [Name], [Difficulty]) VALUES (@RecordID, @Slot, @Name, @Difficulty)
+
+WriteMatchingInfo
+INSERT INTO [MatchingResults] ([RecordID], [Name], [DXRating], [MatchLevel], [Achievement], [Result]) VALUES (@RecordID, @Name, @DXRating, @MatchLevel, @Achievement, @Result)
