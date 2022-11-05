@@ -9,7 +9,7 @@ namespace MaimaiDXRecordSaver
 {
     public static class Program
     {
-        public static readonly string Version = "1.1.0";
+        public static readonly string Version = "1.1.1";
         public static ILog Logger = LogManager.GetLogger("Default");
         public static MaimaiDXWebRequester Requester = null;
         public static DataRecorderBase DataRecorder = null;
@@ -97,7 +97,7 @@ namespace MaimaiDXRecordSaver
                 {
                     WebPageProxy = new WebPageProxy(ConfigManager.Instance.WebPageProxyIPBind,
                         ConfigManager.Instance.WebPageProxyPort);
-                    WebPageProxy.UpdateCredential(Requester.SessionID, Requester.TValue);
+                    WebPageProxy.UpdateCredential(Requester.UserID, Requester.TValue);
                     WebPageProxy.OnCredentialChange += OnCredentialsChange;
                     WebPageProxy.Start();
                 }
@@ -248,6 +248,8 @@ namespace MaimaiDXRecordSaver
             {
                 Logger.Fatal("Unhandled Exception!");
                 Logger.Fatal(err.ToString());
+                Console.WriteLine("Application crashed, press any key to continue :(");
+                Console.ReadKey();
             }
             if(WebPageProxy != null)
             {
@@ -260,7 +262,7 @@ namespace MaimaiDXRecordSaver
         {
             lock(Requester)
             {
-                Requester.SessionID = s;
+                Requester.UserID = s;
                 Requester.TValue = t;
             }
             Logger.Info(string.Format("OnCredentialChange sessionID={0} _t={1}", s, t));
@@ -304,13 +306,13 @@ namespace MaimaiDXRecordSaver
         {
             if(Requester != null)
             {
-                SaveCredential(Requester.SessionID, Requester.TValue);
+                SaveCredential(Requester.UserID, Requester.TValue);
             }
             if (WebPageProxy != null)
             {
                 lock(WebPageProxy)
                 {
-                    WebPageProxy.UpdateCredential(Requester.SessionID, Requester.TValue);
+                    WebPageProxy.UpdateCredential(Requester.UserID, Requester.TValue);
                 }
             }
         }
@@ -326,7 +328,7 @@ namespace MaimaiDXRecordSaver
         {
             Console.WriteLine("Please enter your login credential.");
             Console.Write("userId: ");
-            Requester.SessionID = Console.ReadLine();
+            Requester.UserID = Console.ReadLine();
             Console.Write("_t: ");
             Requester.TValue = Console.ReadLine();
             SaveCredential();

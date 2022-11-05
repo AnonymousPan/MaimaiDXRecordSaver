@@ -8,16 +8,16 @@ namespace MaimaiDXRecordSaver
 {
     public class MaimaiDXWebRequester
     {
-        public string SessionID { get; set; }
+        public string UserID { get; set; }
         public string TValue { get; set; }
         public string UAString { get; set; }
         public bool IsBusy { get; private set; }
 
         private ILog logger = LogManager.GetLogger("WebRequester");
 
-        public MaimaiDXWebRequester(string sessionID, string _t)
+        public MaimaiDXWebRequester(string userID, string _t)
         {
-            SessionID = sessionID;
+            UserID = userID;
             TValue = _t;
             ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
@@ -35,7 +35,7 @@ namespace MaimaiDXRecordSaver
             req.AllowAutoRedirect = false;
             req.Method = "GET";
             CookieCollection cookies = new CookieCollection();
-            cookies.Add(new Cookie("userId", SessionID, "/", "maimai.wahlap.com"));
+            cookies.Add(new Cookie("userId", UserID, "/", "maimai.wahlap.com"));
             cookies.Add(new Cookie("_t", TValue, "/", "maimai.wahlap.com"));
             req.CookieContainer = new CookieContainer();
             req.CookieContainer.Add(cookies);
@@ -46,17 +46,35 @@ namespace MaimaiDXRecordSaver
                 req.GetRequestStream().Write(payload, 0, payload.Length);
             }
             HttpWebResponse resp = (HttpWebResponse)req.GetResponse();
-            if (resp.StatusCode == HttpStatusCode.Found 
+            if (resp.StatusCode == HttpStatusCode.Found
                 && resp.Headers[HttpResponseHeader.Location].Contains("error"))
-                throw new CredentialInvalidException(url, SessionID, TValue);
-            SessionID = resp.Cookies["userId"].Value;
+            {
+                throw new CredentialInvalidException(url, UserID, TValue);
+            }
+            
+            Cookie userIdCookie = resp.Cookies["userId"];
+            bool userIdChanged = userIdCookie != null;
+            if(userIdChanged)
+            {
+                UserID = resp.Cookies["userId"].Value;
+            }
+            
             TValue = resp.Cookies["_t"].Value;
             string str;
             using (StreamReader reader = new StreamReader(resp.GetResponseStream()))
             {
                 str = reader.ReadToEnd();
             }
-            logger.Debug("Request completed. New userId: " + SessionID);
+
+            if(userIdChanged)
+            {
+                logger.Debug("Request completed. New userId: " + UserID);
+            }
+            else
+            {
+                logger.Debug("Request completed. userId is not changed.");
+            }
+
             return str;
         }
 
