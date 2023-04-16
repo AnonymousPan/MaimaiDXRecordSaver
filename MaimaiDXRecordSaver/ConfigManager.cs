@@ -48,7 +48,7 @@ namespace MaimaiDXRecordSaver
             // Database
             DBServer = new ConfigEntryString(ConfigFile, "Database", "Server", "", null);
             DBName = new ConfigEntryString(ConfigFile, "Database", "Name", "", null);
-            DBUsername = new ConfigEntryString(ConfigFile, "Database", "Name", "", null);
+            DBUsername = new ConfigEntryString(ConfigFile, "Database", "Username", "", null);
             DBPassword = new ConfigEntryString(ConfigFile, "Database", "Password", "", null);
             DBUseWindowsAuth = new ConfigEntryBool(ConfigFile, "Database", "UseWindowsAuth", false, null);
 
