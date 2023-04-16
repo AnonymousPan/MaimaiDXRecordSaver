@@ -9,7 +9,7 @@ namespace MaimaiDXRecordSaver
 {
     public static class Program
     {
-        public static readonly string Version = "1.1.1";
+        public static readonly string Version = "1.1.2";
         public static ILog Logger = LogManager.GetLogger("Default");
         public static MaimaiDXWebRequester Requester = null;
         public static DataRecorderBase DataRecorder = null;
@@ -23,7 +23,7 @@ namespace MaimaiDXRecordSaver
             try
             {
                 Logger.Info("========Starting Up========");
-                ConfigManager.Init();
+                new ConfigManager("AppConfig.xml").Initialize();
                 if (!MusicList.Init()) return;
                 foreach (string str in args)
                 {
@@ -65,18 +65,18 @@ namespace MaimaiDXRecordSaver
                 }
                 Requester = new MaimaiDXWebRequester(sessionID, _t);
 
-                if (ConfigManager.Instance.RecordSaveMethod == RecordSaveMethod.File)
+                if (ConfigManager.Instance.SaveMethod.Value == RecordSaveMethod.File)
                 {
                     DataRecorder = new DataRecorderFile();
                 }
                 else
                 {
                     DataRecorderDB rec = new DataRecorderDB();
-                    rec.Server = ConfigManager.Instance.DBServer;
-                    rec.Database = ConfigManager.Instance.DBName;
-                    rec.Username = ConfigManager.Instance.DBUsername;
-                    rec.Password = ConfigManager.Instance.DBPassword;
-                    rec.UseWindowsAuth = ConfigManager.Instance.DBUseWindowsAuth;
+                    rec.Server = ConfigManager.Instance.DBServer.Value;
+                    rec.Database = ConfigManager.Instance.DBName.Value;
+                    rec.Username = ConfigManager.Instance.DBUsername.Value;
+                    rec.Password = ConfigManager.Instance.DBPassword.Value;
+                    rec.UseWindowsAuth = ConfigManager.Instance.DBUseWindowsAuth.Value;
                     DataRecorder = rec;
                 }
                 if (!DataRecorder.Init())
@@ -93,10 +93,10 @@ namespace MaimaiDXRecordSaver
                 }
 
 
-                if (!OfflineMode && ConfigManager.Instance.WebPageProxyEnabled)
+                if (!OfflineMode && ConfigManager.Instance.WebPageProxyEnabled.Value)
                 {
-                    WebPageProxy = new WebPageProxy(ConfigManager.Instance.WebPageProxyIPBind,
-                        ConfigManager.Instance.WebPageProxyPort);
+                    WebPageProxy = new WebPageProxy(ConfigManager.Instance.WebPageProxyIPBind.Value,
+                        ConfigManager.Instance.WebPageProxyPort.Value);
                     WebPageProxy.UpdateCredential(Requester.UserID, Requester.TValue);
                     WebPageProxy.OnCredentialChange += OnCredentialsChange;
                     WebPageProxy.Start();
@@ -425,11 +425,11 @@ namespace MaimaiDXRecordSaver
         {
             Logger.Info("Started moving records to database.");
             DataRecorderDB recDB = new DataRecorderDB();
-            recDB.Server = ConfigManager.Instance.DBServer;
-            recDB.Database = ConfigManager.Instance.DBName;
-            recDB.Username = ConfigManager.Instance.DBUsername;
-            recDB.Password = ConfigManager.Instance.DBPassword;
-            recDB.UseWindowsAuth = ConfigManager.Instance.DBUseWindowsAuth;
+            recDB.Server = ConfigManager.Instance.DBServer.Value;
+            recDB.Database = ConfigManager.Instance.DBName.Value;
+            recDB.Username = ConfigManager.Instance.DBUsername.Value;
+            recDB.Password = ConfigManager.Instance.DBPassword.Value;
+            recDB.UseWindowsAuth = ConfigManager.Instance.DBUseWindowsAuth.Value;
             recDB.Init();
             DataRecorderFile recFile = new DataRecorderFile();
             recFile.Init();
