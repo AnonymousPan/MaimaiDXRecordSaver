@@ -11,7 +11,7 @@ namespace MaimaiDXRecordSaver
     {
         public static readonly string Version = "1.1.2";
         public static ILog Logger = LogManager.GetLogger("Default");
-        public static MaimaiDXWebRequester Requester = null;
+        public static CredentialWebRequester Requester = null;
         public static DataRecorderBase DataRecorder = null;
         public static WebPageProxy WebPageProxy = null;
 
@@ -63,7 +63,19 @@ namespace MaimaiDXRecordSaver
                     _t = Console.ReadLine();
                     SaveCredential(sessionID, _t);
                 }
-                Requester = new MaimaiDXWebRequester(sessionID, _t);
+                Requester = new CredentialWebRequester(sessionID, _t);
+                Requester.Start();
+
+                // TEST
+                // *************************
+                /*
+                WebPageProxy = new WebPageProxy(ConfigManager.Instance.WebPageProxyIPBind.Value,
+                        ConfigManager.Instance.WebPageProxyPort.Value);
+                WebPageProxy.UpdateCredential(Requester.UserID, Requester.TValue);
+                WebPageProxy.OnCredentialChange += OnCredentialsChange;
+                WebPageProxy.Start();
+                Console.ReadKey();
+                */
 
                 if (ConfigManager.Instance.SaveMethod.Value == RecordSaveMethod.File)
                 {
@@ -84,12 +96,9 @@ namespace MaimaiDXRecordSaver
                     return;
                 }
 
-                while (!OfflineMode && !TestPrintPlayerInfo())
+                if(!OfflineMode)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Credential invalid or expried.");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    EnterCredential();
+                    CheckAndEnterCredential();
                 }
 
 
@@ -232,10 +241,6 @@ namespace MaimaiDXRecordSaver
                                     Console.WriteLine("Missing arguments.");
                                 }
                                 break;
-                            case "UNIVERSE":
-                            case "UNIVERSE_WHEN":
-                                Console.WriteLine(universeWhen);
-                                break;
                             default:
                                 Console.WriteLine("Unknown command! Type \"help\" for help.");
                                 break;
@@ -260,11 +265,8 @@ namespace MaimaiDXRecordSaver
 
         private static void OnCredentialsChange(string s, string t)
         {
-            lock(Requester)
-            {
-                Requester.UserID = s;
-                Requester.TValue = t;
-            }
+            Requester.UserID = s;
+            Requester.TValue = t;
             Logger.Info(string.Format("OnCredentialChange sessionID={0} _t={1}", s, t));
         }
 
@@ -324,6 +326,23 @@ namespace MaimaiDXRecordSaver
             Logger.Info("Credential saved.");
         }
 
+        public static void CheckAndEnterCredential()
+        {
+            CredentialWebResponse resp;
+            bool credentialInvalid;
+            do
+            {
+                resp = Requester.Request("https://maimai.wahlap.com/maimai-mobile/home/");
+                credentialInvalid = resp.Failed && resp.Exception is CredentialInvalidException;
+                if(credentialInvalid)
+                {
+                    Console.WriteLine("Invalid credential! Please enter your credential.");
+                    EnterCredential();
+                }
+            }
+            while (credentialInvalid);
+        }
+
         public static void EnterCredential()
         {
             Console.WriteLine("Please enter your login credential.");
@@ -337,31 +356,16 @@ namespace MaimaiDXRecordSaver
         private static void PrintPlayerInfo()
         {
             PlayerInfoPageParser parser = new PlayerInfoPageParser();
-            parser.LoadPage(Requester.Request("https://maimai.wahlap.com/maimai-mobile/playerData/"));
+            parser.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/playerData/"));
             parser.Parse();
             PlayerInfo obj = parser.GetResult();
             Console.WriteLine(obj.ToString());
         }
 
-        private static bool TestPrintPlayerInfo()
-        {
-            try
-            {
-                PrintPlayerInfo();
-                SaveCredential();
-                return true;
-            }
-            catch (CredentialInvalidException)
-            {
-                Logger.Error("Credential invalid or expried.");
-                return false;
-            }
-        }
-
         private static void PrintMusicRecord(int index)
         {
             MusicRecordPageParser parser = new MusicRecordPageParser();
-            parser.LoadPage(Requester.Request("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
+            parser.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
             parser.Parse();
             MusicRecord obj = parser.GetResult();
             Console.WriteLine(obj.ToString());
@@ -370,7 +374,7 @@ namespace MaimaiDXRecordSaver
         private static void PrintMusicRecordList()
         {
             MusicRecordListPageParser parser = new MusicRecordListPageParser();
-            parser.LoadPage(Requester.Request("https://maimai.wahlap.com/maimai-mobile/record/"));
+            parser.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/"));
             parser.Parse();
             List<MusicRecordSummary> list = parser.GetResult();
             for(int i = 0; i < list.Count; i++ )
@@ -382,7 +386,7 @@ namespace MaimaiDXRecordSaver
         private static void AutoSaveRecords()
         {
             MusicRecordListPageParser parser1 = new MusicRecordListPageParser();
-            parser1.LoadPage(Requester.Request("https://maimai.wahlap.com/maimai-mobile/record/"));
+            parser1.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/"));
             parser1.Parse();
             List<MusicRecordSummary> list = parser1.GetResult();
             int[] indices = DataRecorder.GetRecordIndicesNeedToSave(list);
@@ -391,7 +395,7 @@ namespace MaimaiDXRecordSaver
             {
                 int index = indices[i];
                 Logger.Info("AutoSaveRecords: Saving record, idx=" + index.ToString());
-                parser2.LoadPage(Requester.Request("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
+                parser2.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
                 parser2.Parse();
                 MusicRecord rec = parser2.GetResult();
                 if(DataRecorder.SaveMusicRecord(rec) == -1)
@@ -412,7 +416,7 @@ namespace MaimaiDXRecordSaver
         {
             Logger.Info("SaveRecordID: Saving record, idx=" + index.ToString());
             MusicRecordPageParser parser = new MusicRecordPageParser();
-            parser.LoadPage(Requester.Request("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
+            parser.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
             parser.Parse();
             MusicRecord rec = parser.GetResult();
             if (DataRecorder.SaveMusicRecord(rec) == -1)
@@ -440,53 +444,10 @@ namespace MaimaiDXRecordSaver
                 Console.WriteLine(string.Format("Moving record {0} / {1}.", i, idMax));
                 MusicRecord rec = recFile.GetMusicRecord(i);
                 recDB.SaveMusicRecord(rec);
-
-                /*
-                MusicRecord rec1 = recDB.GetMusicRecord(i);
-                string str1 = rec.ToString();
-                string str2 = rec1.ToString();
-                if(str1 != str2)
-                {
-                    Console.WriteLine("ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                    Console.WriteLine(str1);
-                    Console.WriteLine(str2);
-                }
-                else
-                {
-                    Console.WriteLine("Check OK");
-                }
-                //Console.WriteLine(rec.ToString() == rec1.ToString() ? "Check OK" : "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                */
             }
 
             Logger.Info("Records moved to database.");
         }
-
-        private static string universeWhen =
-"                   __                    __\n" +
-" ________  _____  (__) ________  _____  (__)  ______  _  __           ___     __\n" +
-"|        |/     \\  //||        |/     \\  //| |__    || ||__| _____    /  /.----  -.\n" +
-"|        ||  _  | |  ||        ||  _  | |  |   /  |\" | L___ | ____ \\ /  / ^---- --^\n" +
-"|  |  |  ||     | |  ||  |  |  ||     | |  |  |  /__ \\____ \\ ____) |\\  \\   ( + |\n" +
-"|//|//|// \\_____| |__||//|//|// \\_____| |__|  \\_____||_____/|_____/  \\__\\   ~/_/  TM\n" +
-"\n" +
-" __     __   _         __  ___      ___ _________   ________    _______   _________ \n" +
-"|  |   |  | | \\ \\  ☆ (__) \\  \\    /  / |        | |  _____ \\  /       ☆ |        |\n" +
-"|  |   |  | |  \\ \\| |  __   \\  \\  /  /  |  ------* |  |  _| | |  <<----   |  ------*\n" +
-"|  |   |  | |   \\ | | /  \\   \\  \\/  /   | |  __    |  | | __/ \\       \\   | |  __   \n" +
-"|  \\___/  | | | \\ | | |  |    \\    /    | | (__)   |  | \\ \\    ---->>  |  | | (__)  \n" +
-"\\         / | |\\ \\| | |  |     \\  /     |  ------. |  |  \\ \\  |        |  |  ------.\n" +
-" \\_______/  |_| \\ |_| |__|      \\/      |________| |__|   \\_\\ |_______/   |________|\n" +
-"                                 __   __   __   __   __\n" +
-"                                (ユ) (ニ) (バ) (—) (ス)\n" +
-"                                 ~~   ~~   ~~   ~~   ~~\n" +
-" __            __   __      __   ________   _    _    ______\n" +
-"\\  \\    /\\    /  / |  |    |  | |  ______| | \\  | |  /      \\\n" +
-" \\  \\  /  \\  /  /  |  |____|  | | |______  |  \\ | | |  /--\\  \\\n" +
-"  \\  \\/    \\/  /   |          | |  ______| |   \\| |  --   |  |\n" +
-"   \\    /\\    /    |  |----|  | | |        | |\\   |      /__/\n" +
-"    \\  /  \\  /     |  |    |  | |  ------. | | \\  |      __\n" +
-"     \\/    \\/      |__|    |__| |________| |_|  \\_|     (__)\n";
 
         private static string help =
             "Available commands:\n" +
