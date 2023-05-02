@@ -67,7 +67,9 @@
     <Compile Include="CredentialWebResponse.cs" />
     <Compile Include="HttpRequest.cs" />
     <Compile Include="HttpResponse.cs" />
+    <Compile Include="MIMEHelper.cs" />
     <Compile Include="MyHttpServer.cs" />
+    <Compile Include="Program.Commands.cs" />
     <Compile Include="WechatLoginProxy.cs" />
     <None Include="app.config" />
     <None Include="ConfigManager.cs.old" />
@@ -103,9 +105,14 @@
     <Content Include="AppConfig.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="MIMEMapping.txt" />
     <Content Include="SqlCommands.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="WebResources\css\default.css" />
+    <Content Include="WebResources\index.html" />
+    <Content Include="WebResources\no_changename.html" />
+    <Content Include="WebResources\no_logout.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
