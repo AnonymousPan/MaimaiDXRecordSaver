@@ -18,7 +18,7 @@ namespace MaimaiDXRecordSaver
             LastIDPath = Path.Combine(SavePath, "LastRecordID");
             try
             {
-                logger.Info("Initializing Data Recorder (File)");
+                logger.Info("正在初始化数据记录模块(文件)");
                 if(!Directory.Exists(SavePath))
                 {
                     Directory.CreateDirectory(SavePath);
@@ -31,7 +31,7 @@ namespace MaimaiDXRecordSaver
             }
             catch(Exception err)
             {
-                logger.Error("Can not initialize Data Recorder (File)");
+                logger.Error("无法初始化数据记录模块(文件)");
                 logger.Error(err.ToString());
                 return false;
             }
@@ -67,7 +67,7 @@ namespace MaimaiDXRecordSaver
             }
             catch(Exception err)
             {
-                logger.Warn("Can not save MusicRecord");
+                logger.Warn("无法保存乐曲记录");
                 logger.Warn(err.ToString());
                 return -1;
             }

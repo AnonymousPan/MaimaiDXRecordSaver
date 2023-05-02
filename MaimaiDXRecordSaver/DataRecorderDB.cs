@@ -23,32 +23,33 @@ namespace MaimaiDXRecordSaver
         {
             try
             {
+                logger.Info("正在初始化数据记录模块(数据库)");
                 connection = new SqlConnection(GetConnectString());
                 connection.Open();
                 cmdHelper = new SqlCommandHelper(connection, File.ReadAllText("SqlCommands.txt"));
                 if(!cmdHelper.IsTableExists("MusicRecords"))
                 {
-                    logger.Warn("Table MusicRecords not exists, creating.");
+                    logger.Warn("表 MusicRecords 不存在, 正在创建");
                     cmdHelper.ExecuteNonQuery("CreateTable_MusicRecords");
                 }
                 if (!cmdHelper.IsTableExists("Judgements"))
                 {
-                    logger.Warn("Table Judgements not exists, creating.");
+                    logger.Warn("表 Judgements 不存在, 正在创建");
                     cmdHelper.ExecuteNonQuery("CreateTable_Judgements");
                 }
                 if (!cmdHelper.IsTableExists("Characters"))
                 {
-                    logger.Warn("Table Characters not exists, creating.");
+                    logger.Warn("表 Characters 不存在, 正在创建");
                     cmdHelper.ExecuteNonQuery("CreateTable_Characters");
                 }
                 if (!cmdHelper.IsTableExists("Friends"))
                 {
-                    logger.Warn("Table Friends not exists, creating.");
+                    logger.Warn("表 Friends 不存在, 正在创建");
                     cmdHelper.ExecuteNonQuery("CreateTable_Friends");
                 }
                 if (!cmdHelper.IsTableExists("MatchingResults"))
                 {
-                    logger.Warn("Table MatchingResults not exists, creating.");
+                    logger.Warn("表 MatchingResults 不存在, 正在创建");
                     cmdHelper.ExecuteNonQuery("CreateTable_MatchingResults");
                 }
 
@@ -56,7 +57,7 @@ namespace MaimaiDXRecordSaver
             }
             catch(Exception err)
             {
-                logger.Error("Can not initialize Data Recorder (Database)");
+                logger.Error("无法初始化数据记录模块(数据库)");
                 logger.Error(err.ToString());
                 return false;
             }
@@ -108,7 +109,7 @@ namespace MaimaiDXRecordSaver
             }
             catch(Exception err)
             {
-                logger.Warn("Can not save MusicRecord");
+                logger.Warn("无法保存乐曲记录");
                 logger.Warn(err.ToString());
                 return -1;
             }

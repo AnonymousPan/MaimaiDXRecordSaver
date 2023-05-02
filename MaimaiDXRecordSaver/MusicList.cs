@@ -28,21 +28,21 @@ namespace MaimaiDXRecordSaver
                 string cachePath = "MusicList.json";
                 if (File.Exists(cachePath))
                 {
-                    logger.Info("Loading music list from local cache.");
+                    logger.Info("正在从本地加载乐曲信息");
                     string json = File.ReadAllText(cachePath);
                     Instance.LoadFromJson(json);
                 }
                 else
                 {
-                    logger.Info("Loading music list from DivingFish API.");
+                    logger.Info("正在从DivingFish API加载乐曲信息");
                     Instance.LoadFromDivingFishApi(true, cachePath);
                 }
-                logger.Info(string.Format("Loaded {0} music entries.", Instance.List.Count));
+                logger.Info(string.Format("已加载{0}条乐曲信息", Instance.List.Count));
                 return true;
             }
             catch(Exception err)
             {
-                logger.Error("Can not load music list.");
+                logger.Error("无法加载乐曲信息");
                 logger.Error(err.ToString());
                 return false;
             }

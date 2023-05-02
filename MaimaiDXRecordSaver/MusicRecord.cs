@@ -47,17 +47,17 @@ namespace MaimaiDXRecordSaver
 
         public override string ToString()
         {
-            string str = "========Music Record========\n";
-            str += string.Format("{0}. {1}({2},{3}Level)\n", MusicID, MusicTitle, MusicDifficulty.GetName(), MusicIsDXLevel ? "DX" : "SD");
+            string str = "========乐曲记录========\n";
+            str += string.Format("{0}. {1}({2},{3}谱面)\n", MusicID, MusicTitle, MusicDifficulty.GetName(), MusicIsDXLevel ? "DX" : "标准");
             str += string.Format("Track{0} {1} Ranking:{2}\n", TrackNumber, PlayTime, Ranking);
-            str += string.Format("Achievement: {0}% {1} {2}\n", Achievement / 10000.0d, Rating.GetName(), AchievementNewRecord ? "(New Record)" : "");
-            str += string.Format("DX Score: {0} {1}\n", DXScore, DXScoreNewRecord ? "(New Record)" : "");
+            str += string.Format("Achievement: {0}% {1} {2}\n", Achievement / 10000.0d, Rating.GetName(), AchievementNewRecord ? "(新纪录)" : "");
+            str += string.Format("DX分数: {0} {1}\n", DXScore, DXScoreNewRecord ? "(新纪录)" : "");
             str += string.Format("Combo: {0}/{1}({2}) Sync:{3}/{4}({5})\n", Combo, MaxCombo, ComboIcon.GetName(), Sync, MaxSync, SyncIcon.GetName());
-            str += "Judgements:\n" + Judgements.ToString();
+            str += "判定信息:\n" + Judgements.ToString();
             str += string.Format("Fast: {0} Late: {1}\n", FastCount, LateCount);
-            str += string.Format("DX Rating: {0}(Base) + {1}(MatchLevel) = {2}({3})\n", BaseRating, MatchLevelRating, NewRating, RatingChange.GetName());
-            str += string.Format("Match Level Rating Change: {0} Current Match Level: {1}\n", MatchLevelRatingChange, NewMatchLevel.GetName());
-            str += "Characters:\n";
+            str += string.Format("DX Rating: {0}(底分) + {1}(段位分) = {2}({3})\n", BaseRating, MatchLevelRating, NewRating, RatingChange.GetName());
+            str += string.Format("段位分变化: {0} 当前段位: {1}\n", MatchLevelRatingChange, NewMatchLevel.GetName());
+            str += "旅行伙伴:\n";
             for(int i = 0; i < 5; i++ )
             {
                 if(Characters[i] == null)
@@ -70,7 +70,7 @@ namespace MaimaiDXRecordSaver
                     str += string.Format("[{0}] ID:{1} ☆x{2} Level.{3}\n", i + 1, info.CharacterID, info.Stars, info.Level);
                 }
             }
-            str += "Friends:\n";
+            str += "拼机玩家:\n";
             for(int i = 0; i < 3; i++ )
             {
                 if(string.IsNullOrEmpty(FriendNames[i]))
@@ -84,11 +84,11 @@ namespace MaimaiDXRecordSaver
             }
             if(MatchingInfo == null)
             {
-                str += "Matching Result: N/A\n";
+                str += "友人对战结果: N/A\n";
             }
             else
             {
-                str += "Matching Result:\n";
+                str += "友人对战结果:\n";
                 str += MatchingInfo.ToString();
             }
             str += "============================\n";

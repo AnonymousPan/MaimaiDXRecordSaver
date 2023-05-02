@@ -163,7 +163,7 @@ namespace MaimaiDXRecordSaver
 
         private void RequesterThreadProc()
         {
-            logger.Info("Credential web requester thread started");
+            logger.Info("凭据网络请求线程已启动");
             while(running)
             {
                 while(requestQueue.Count > 0 && requestQueue.TryDequeue(out Tuple<CredentialWebRequest, AutoResetEvent> tuple))
@@ -171,7 +171,7 @@ namespace MaimaiDXRecordSaver
                     CredentialWebRequest req = tuple.Item1;
                     AutoResetEvent waitHandle = tuple.Item2;
                     string postFlag = req.IsPost ? "[POST] " : "";
-                    logger.Debug("Requesting url: " + postFlag + req.URL);
+                    logger.Debug("正在请求URL: " + postFlag + req.URL);
 
                     CredentialWebResponse resp = null;
                     HttpWebResponse httpResp = null;
@@ -228,11 +228,11 @@ namespace MaimaiDXRecordSaver
                     {
                         if(err is CredentialInvalidException)
                         {
-                            logger.Warn("Invalid credential");
+                            logger.Warn("无效的凭据");
                         }
                         else
                         {
-                            logger.Warn("Exception while requesting\n" + err.ToString());
+                            logger.Warn("请求时发生异常\n" + err.ToString());
                         }
                         resp = new CredentialWebResponse(err);
                     }

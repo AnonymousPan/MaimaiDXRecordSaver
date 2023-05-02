@@ -15,9 +15,9 @@ namespace MaimaiDXRecordSaver
 
         public override string ToString()
         {
-            string str = string.Format("[V.S.] Name: {0}\n", PlayerName);
+            string str = string.Format("[友人对战] 玩家名称: {0}\n", PlayerName);
             str += string.Format("DX Rating: {0} {1}\n", DXRating, MatchLevel.GetName());
-            str += string.Format("Achievement: {0}% {1}\n", Achievement / 10000.0f, Won ? "Won" : "Lost");
+            str += string.Format("达成率: {0}% {1}\n", Achievement / 10000.0f, Won ? "Won" : "Lost");
             return str;
         }
     }

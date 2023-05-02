@@ -31,7 +31,7 @@ namespace MaimaiDXRecordSaver
 
         public override string ToString()
         {
-            string str = "========Player Info========\n";
+            string str = "========玩家信息========\n";
             str += string.Format("Name: {0}\tDX Rating: {1} {2}\n", Name, Rating, Level.GetName());
             str += string.Format("Max Rating: {0}\t☆x{1}\tPlay Count: {2}\n", MaxRating, Stars, PlayCount);
             str += string.Format("SSS+ {0}\tSSS {1}\tSS+ {2}\tSS {3}\n", new object[] { SSSPlus, SSS, SSPlus, SS });

@@ -41,7 +41,7 @@ namespace MaimaiDXRecordSaver
                     Command_LocalRecent(arr);
                     break;
                 default:
-                    Console.WriteLine("Unknown command! Type \"help\" for help.");
+                    Console.WriteLine("未知的命令，输入\"help\"查看帮助");
                     break;
             }
             SaveCredential();
@@ -58,18 +58,17 @@ namespace MaimaiDXRecordSaver
             {
                 if (int.TryParse(arr[1], out int index))
                 {
-                    Logger.Info("Command: RecID, index=" + index);
                     PrintMusicRecord(index);
                     SaveCredential();
                 }
                 else
                 {
-                    Console.WriteLine("Invalid number.");
+                    Console.WriteLine("无效的数字");
                 }
             }
             else
             {
-                Console.WriteLine("Missing arguments.");
+                Console.WriteLine("缺少参数");
             }
         }
 
@@ -105,13 +104,13 @@ namespace MaimaiDXRecordSaver
             for (int i = indices.Length - 1; i >= 0; i--)
             {
                 int index = indices[i];
-                Logger.Info("AutoSaveRecords: Saving record, idx=" + index.ToString());
+                Logger.Info("SaveAll: 正在保存记录, idx=" + index.ToString());
                 parser2.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
                 parser2.Parse();
                 MusicRecord rec = parser2.GetResult();
                 if (DataRecorder.SaveMusicRecord(rec) == -1)
                 {
-                    Logger.Warn("AutoSaveRecords: Failed to save music record, index=" + index.ToString());
+                    Logger.Warn("SaveAll: 无法保存记录, index=" + index.ToString());
                 }
                 Thread.Sleep(250);
             }
@@ -123,18 +122,17 @@ namespace MaimaiDXRecordSaver
             {
                 if (int.TryParse(arr[1], out int index))
                 {
-                    Logger.Info("Command: SaveID");
                     SaveRecordID(index);
                     SaveCredential();
                 }
                 else
                 {
-                    Console.WriteLine("Invalid number.");
+                    Console.WriteLine("无效的数字");
                 }
             }
             else
             {
-                Console.WriteLine("Missing arguments.");
+                Console.WriteLine("缺少参数");
             }
         }
 
@@ -144,7 +142,6 @@ namespace MaimaiDXRecordSaver
             {
                 if (int.TryParse(arr[1], out int index))
                 {
-                    Logger.Info("Command: LocalID");
                     if (DataRecorder.IsRecordExists(index))
                     {
                         MusicRecord rec = DataRecorder.GetMusicRecord(index);
@@ -152,17 +149,17 @@ namespace MaimaiDXRecordSaver
                     }
                     else
                     {
-                        Console.WriteLine("Record not found.");
+                        Console.WriteLine("记录未找到");
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Invalid number.");
+                    Console.WriteLine("无效的数字");
                 }
             }
             else
             {
-                Console.WriteLine("Missing arguments.");
+                Console.WriteLine("缺少参数");
             }
         }
 
@@ -173,7 +170,6 @@ namespace MaimaiDXRecordSaver
                 int num = 0;
                 if (int.TryParse(arr[1], out num))
                 {
-                    Logger.Info("Command: LocalRecent");
                     int latestID = DataRecorder.GetLastRecordID();
                     int j = Math.Max(latestID - num + 1, 0);
                     for (int i = latestID; i >= j; i--)
@@ -185,18 +181,18 @@ namespace MaimaiDXRecordSaver
                         }
                         else
                         {
-                            Console.WriteLine("Record not found!");
+                            Console.WriteLine("记录未找到");
                         }
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Invalid number.");
+                    Console.WriteLine("无效的数字");
                 }
             }
             else
             {
-                Console.WriteLine("Missing arguments.");
+                Console.WriteLine("缺少参数");
             }
         }
     }

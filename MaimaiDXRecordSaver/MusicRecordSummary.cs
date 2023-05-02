@@ -67,8 +67,8 @@ namespace MaimaiDXRecordSaver
 
         public override string ToString()
         {
-            string str = string.Format("[Summary] {0} ({1},{2}Level) {3}% {4}\n",
-                MusicTitle, MusicDifficulty.GetName(), MusicIsDXLevel ? "DX" : "SD",
+            string str = string.Format("[概览] {0} ({1},{2}谱面) {3}% {4}\n",
+                MusicTitle, MusicDifficulty.GetName(), MusicIsDXLevel ? "DX" : "标准",
                 Achievement / 10000.0f, LevelRatingEnum.AchievementToRating(Achievement).GetName());
             str += string.Format("Track{0} {1} (Index={2})\n", TrackNumber, PlayTime, Index);
             return str;

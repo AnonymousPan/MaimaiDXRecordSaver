@@ -7,7 +7,6 @@ using System.Net;
 using log4net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Net.Http;
 
 namespace MaimaiDXRecordSaver
 {
@@ -18,8 +17,6 @@ namespace MaimaiDXRecordSaver
         private ILog logger = LogManager.GetLogger("WebPageProxy");
         private string ipBind = "";
         private int port = 0;
-
-        private HttpClient httpClient;
 
         private MyHttpServer httpServer;
 
@@ -35,8 +32,6 @@ namespace MaimaiDXRecordSaver
             port = _port;
             webPageProxyThread = new Thread(WebPageProxyThreadProc);
             webPageProxyThread.IsBackground = true;
-
-            httpClient = new HttpClient();
 
             httpServer = new MyHttpServer(new IPAddress(0L), port);
 
@@ -62,11 +57,11 @@ namespace MaimaiDXRecordSaver
             {
                 running = false;
                 webPageProxyThread.Abort();
-                logger.Info("Web page proxy stopped.");
+                logger.Info("网页代理已停止");
             }
             catch(Exception err)
             {
-                logger.Warn("Can not stop Web page proxy.");
+                logger.Warn("无法停止网页代理");
                 logger.Warn(err.ToString());
             }
         }
@@ -74,7 +69,7 @@ namespace MaimaiDXRecordSaver
         private void WebPageProxyThreadProc()
         {
             LoadResources();
-            logger.Info(string.Format("Web page proxy started at {0}:{1}", ipBind, port));
+            logger.Info(string.Format("网页代理已在 {0}:{1} 上运行", ipBind, port));
             httpServer.Start();
             while(running)
             {
@@ -140,10 +135,10 @@ namespace MaimaiDXRecordSaver
                 {
                     string reqIp = httpServer.CurrentRequestEndPoint == null ? "N/A"
                         : httpServer.CurrentRequestEndPoint.ToString();
-                    logger.WarnFormat("Failed to process request [IP={0} URL={1}]\n{2}", reqIp, reqUrl, err.ToString());
+                    logger.WarnFormat("处理请求时发生异常 [IP={0} URL={1}]\n{2}", reqIp, reqUrl, err.ToString());
                 }
             }
-            logger.Info("Web page proxy thread exited");
+            logger.Info("网页代理线程已退出");
         }
 
         private void AddServerHeader(HttpResponse resp)
@@ -174,7 +169,7 @@ namespace MaimaiDXRecordSaver
 
         private void LoadResources()
         {
-            logger.Info("Loading web resources");
+            logger.Info("正在加载资源");
             if(Directory.Exists("WebResources"))
             {
                 string rootPath = Path.GetFullPath("WebResources") + "\\";
@@ -185,7 +180,7 @@ namespace MaimaiDXRecordSaver
                     string mime = MIMEHelper.Instance.GetMIMEType(relPath);
                     if(string.IsNullOrEmpty(mime))
                     {
-                        logger.WarnFormat("MIME type of file {0} is unknown", relPath);
+                        logger.WarnFormat("文件 {0} 的MIME类型未知", relPath);
                         webResourcesMime.Add(relPath, null);
                     }
                     else
@@ -194,11 +189,11 @@ namespace MaimaiDXRecordSaver
                     }
                 }
                 ProcessHtml();
-                logger.InfoFormat("Loaded {0} web resources", webResources.Count);
+                logger.InfoFormat("已加载{0}个资源", webResources.Count);
             }
             else
             {
-                logger.Warn("WebResources directory not found");
+                logger.Warn("WebResources目录不存在");
             }
         }
 
@@ -282,7 +277,7 @@ namespace MaimaiDXRecordSaver
             CredentialWebResponse resp = Program.Requester.Request(req);
             if (resp.Failed)
             {
-                logger.InfoFormat("Requesting URL {0} (failed) from {1}", url, httpServer.CurrentRequestEndPoint.ToString());
+                logger.InfoFormat("请求URL {0} 失败 IP={1}", url, httpServer.CurrentRequestEndPoint.ToString());
                 HttpResponse httpResp = HttpResponse.CreateDefaultResponse(500);
                 AddServerHeader(httpResp);
                 httpResp.ContentBytes = Encoding.UTF8.GetBytes(
@@ -300,7 +295,7 @@ namespace MaimaiDXRecordSaver
                 httpResp.ContentType = resp.ContentType;
                 if (resp.ContentType.StartsWith("text/html"))
                 {
-                    logger.InfoFormat("Requesting URL {0} from {1}", url, httpServer.CurrentRequestEndPoint.ToString());
+                    logger.InfoFormat("正在请求URL {0} IP={1}", url, httpServer.CurrentRequestEndPoint.ToString());
                     string content = Encoding.UTF8.GetString(resp.ContentBytes);
                     content = RewriteURL(content);
                     httpResp.ContentBytes = Encoding.UTF8.GetBytes(content);
@@ -330,7 +325,7 @@ namespace MaimaiDXRecordSaver
             httpResp.ContentType = resp.ContentType;
             if (resp.ContentType.StartsWith("text/html"))
             {
-                logger.InfoFormat("Requesting URL {0} (no credential) from {1}", url, httpServer.CurrentRequestEndPoint.ToString());
+                logger.InfoFormat("正在请求URL {0} (无凭据) IP={1}", url, httpServer.CurrentRequestEndPoint.ToString());
                 using (StreamReader reader = new StreamReader(resp.GetResponseStream()))
                 {
                     string content = reader.ReadToEnd();
@@ -382,7 +377,7 @@ namespace MaimaiDXRecordSaver
 
         private void ProcessReq_Index()
         {
-            logger.InfoFormat("Requesting index.html from {0}", httpServer.CurrentRequestEndPoint.ToString());
+            logger.InfoFormat("正在请求主页 IP={0}", httpServer.CurrentRequestEndPoint.ToString());
             HttpResponse resp = HttpResponse.CreateDefaultResponse(200);
             AddServerHeader(resp);
             resp.ContentType = "text/html";
@@ -399,7 +394,7 @@ namespace MaimaiDXRecordSaver
 
         private void ProcessReq_NotFound()
         {
-            logger.InfoFormat("Requesting a non-exist URL {0} from {1}",
+            logger.InfoFormat("正在请求一个不存在的URL {0} IP={1}",
                 httpServer.CurrentRequest.URL, httpServer.CurrentRequestEndPoint.ToString());
             HttpResponse resp = HttpResponse.CreateDefaultResponse(404);
             AddServerHeader(resp);
@@ -408,7 +403,7 @@ namespace MaimaiDXRecordSaver
 
         private void ProcessReq_BadRequest()
         {
-            logger.InfoFormat("Bad request from {0}", httpServer.CurrentRequestEndPoint.ToString());
+            logger.InfoFormat("无效的请求 IP={0}", httpServer.CurrentRequestEndPoint.ToString());
             HttpResponse resp = HttpResponse.CreateDefaultResponse(400);
             AddServerHeader(resp);
             httpServer.SendResponse(resp);

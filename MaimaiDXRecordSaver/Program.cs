@@ -22,7 +22,7 @@ namespace MaimaiDXRecordSaver
             ShowWelcomeMessage();
             try
             {
-                Logger.Info("========Starting Up========");
+                Logger.Info("========正在启动========");
 
                 // Load config
                 new ConfigManager("AppConfig.xml").Initialize();
@@ -41,7 +41,7 @@ namespace MaimaiDXRecordSaver
                     if(str.ToUpper() == "-OFFLINE")
                     {
                         OfflineMode = true;
-                        Logger.Info("Offline Mode enabled because -offline appeared in arguments.");
+                        Logger.Info("正在以离线模式启动(-offline参数)");
                         break;
                     }
                 }
@@ -50,12 +50,12 @@ namespace MaimaiDXRecordSaver
                 string sessionID, _t;
                 if (LoadCredential(out sessionID, out _t))
                 {
-                    Logger.Info("Load credential OK.");
+                    Logger.Info("成功加载登录凭据");
                 }
                 else
                 {
-                    Logger.Info("Saved credential not found.");
-                    Console.WriteLine("Please enter your login credential.");
+                    Logger.Info("未找到已保存的登录凭据");
+                    Console.WriteLine("请输入你的登录凭据");
                     Console.Write("userId: ");
                     sessionID = Console.ReadLine();
                     Console.Write("_t: ");
@@ -118,9 +118,9 @@ namespace MaimaiDXRecordSaver
             }
             catch(Exception err)
             {
-                Logger.Fatal("Unhandled Exception!");
+                Logger.Fatal("未处理的异常！");
                 Logger.Fatal(err.ToString());
-                Console.WriteLine("Application crashed, press any key to continue :(");
+                Console.WriteLine("程序意外崩溃，按任意键继续 :(");
                 Console.ReadKey();
             }
 
@@ -143,9 +143,9 @@ namespace MaimaiDXRecordSaver
 
         private static void ShowWelcomeMessage()
         {
-            Console.WriteLine("Welcome to use MaimaiDX Record Saver");
-            Console.WriteLine("Made by AnonymousPan");
-            Console.WriteLine("Version: " + Version);
+            Console.WriteLine("欢迎使用 MaimaiDXRecordSaver - 一款用于存储maimaiDX游玩记录的工具");
+            Console.WriteLine("由 潘某人-AnonymousPan 制作");
+            Console.WriteLine("版本: " + Version);
         }
 
         public static bool LoadCredential(out string sessionID, out string _t)
@@ -161,7 +161,7 @@ namespace MaimaiDXRecordSaver
                 }
                 catch(Exception err)
                 {
-                    Logger.Warn("Can not read login credential.\n" + err.ToString());
+                    Logger.Warn("无法读取已保存的登录凭据\n" + err.ToString());
                     sessionID = "";
                     _t = "";
                     return false;
@@ -187,7 +187,7 @@ namespace MaimaiDXRecordSaver
         {
             string str = sessionID + "\n" + _t;
             File.WriteAllText("LoginCredential.txt", str);
-            Logger.Info("Credential saved.");
+            Logger.Info("登录凭据已保存");
         }
 
         public static void CheckAndEnterCredential()
@@ -200,7 +200,7 @@ namespace MaimaiDXRecordSaver
                 credentialInvalid = resp.Failed && resp.Exception is CredentialInvalidException;
                 if(credentialInvalid)
                 {
-                    Console.WriteLine("Invalid credential! Please enter your credential.");
+                    Console.WriteLine("无效的登录凭据，请重新输入");
                     EnterCredential();
                 }
             }
@@ -209,7 +209,7 @@ namespace MaimaiDXRecordSaver
 
         public static void EnterCredential()
         {
-            Console.WriteLine("Please enter your login credential.");
+            Console.WriteLine("请输入你的登录凭据");
             Console.Write("userId: ");
             Requester.UserID = Console.ReadLine();
             Console.Write("_t: ");
@@ -228,20 +228,20 @@ namespace MaimaiDXRecordSaver
 
         private static void SaveRecordID(int index)
         {
-            Logger.Info("SaveRecordID: Saving record, idx=" + index.ToString());
+            Logger.Info("SaveRecordID: 正在保存记录, idx=" + index.ToString());
             MusicRecordPageParser parser = new MusicRecordPageParser();
             parser.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
             parser.Parse();
             MusicRecord rec = parser.GetResult();
             if (DataRecorder.SaveMusicRecord(rec) == -1)
             {
-                Logger.Warn("SaveRecordID: Failed to save music record, index=" + index.ToString());
+                Logger.Warn("SaveRecordID: 无法保存记录, index=" + index.ToString());
             }
         }
 
         private static void MoveToDatabase()
         {
-            Logger.Info("Started moving records to database.");
+            Logger.Info("开始将记录移动至数据库");
             DataRecorderDB recDB = new DataRecorderDB();
             recDB.Server = ConfigManager.Instance.DBServer.Value;
             recDB.Database = ConfigManager.Instance.DBName.Value;
@@ -255,24 +255,24 @@ namespace MaimaiDXRecordSaver
             int idMax = recFile.GetLastRecordID();
             for(int i = 0; i < idMax + 1; i++ )
             {
-                Console.WriteLine(string.Format("Moving record {0} / {1}.", i, idMax));
+                Console.WriteLine(string.Format("正在移动记录 {0} / {1}.", i, idMax));
                 MusicRecord rec = recFile.GetMusicRecord(i);
                 recDB.SaveMusicRecord(rec);
             }
 
-            Logger.Info("Records moved to database.");
+            Logger.Info("记录已移动至数据库");
         }
 
         private static string help =
-            "Available commands:\n" +
-            "help - Show available commands.\n" +
-            "exit - Save login credential and exit.\n" +
-            "recid <ID> - Get the specified music record online.\n" +
-            "reclist - Get music record summaries online.\n" +
-            "playerinfo - Get the player info online.\n" +
-            "saveall - Save the new music records automatically.\n" +
-            "saveid <ID> - Save music record with specified index.\n" +
-            "localid <ID> - Show the local music record with specified LocalID.\n" +
-            "localrecent <amount> - Show the latest local music record.";
+            "可用命令:\n" +
+            "help - 显示可用命令\n" +
+            "exit - 保存登录凭据并退出\n" +
+            "recid <ID> - 线上获取指定的乐曲记录\n" +
+            "reclist - 线上获取最近游玩的乐曲记录\n" +
+            "playerinfo - 线上获取玩家信息\n" +
+            "saveall - 自动保存最新的乐曲记录\n" +
+            "saveid <ID> - 保存指定的乐曲记录\n" +
+            "localid <ID> - 获取指定的本地乐曲记录\n" +
+            "localrecent <数量> - 显示本地最后N条乐曲记录";
     }
 }
