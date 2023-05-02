@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace MaimaiDXRecordSaver
 {
-    public static class Program
+    public static partial class Program
     {
         public static readonly string Version = "1.1.2";
         public static ILog Logger = LogManager.GetLogger("Default");
@@ -23,8 +23,14 @@ namespace MaimaiDXRecordSaver
             try
             {
                 Logger.Info("========Starting Up========");
+
+                // Load config
                 new ConfigManager("AppConfig.xml").Initialize();
+
+                // Load music list
                 if (!MusicList.Init()) return;
+
+                // Check command line arguments
                 foreach (string str in args)
                 {
                     if(str.ToUpper() == "-MOVETODB")
@@ -39,19 +45,12 @@ namespace MaimaiDXRecordSaver
                         break;
                     }
                 }
-                if(!OfflineMode && IsServerClosedNow())
-                {
-                    OfflineMode = true;
-                    Logger.Info("Offline Mode enabled because the server is closed.");
-                }
                 
-                
+                // Load credential
                 string sessionID, _t;
                 if (LoadCredential(out sessionID, out _t))
                 {
                     Logger.Info("Load credential OK.");
-                    Logger.Info("userId = " + sessionID);
-                    Logger.Info("_t = " + _t);
                 }
                 else
                 {
@@ -63,20 +62,12 @@ namespace MaimaiDXRecordSaver
                     _t = Console.ReadLine();
                     SaveCredential(sessionID, _t);
                 }
+
+                // Start credential web requester
                 Requester = new CredentialWebRequester(sessionID, _t);
                 Requester.Start();
 
-                // TEST
-                // *************************
-                /*
-                WebPageProxy = new WebPageProxy(ConfigManager.Instance.WebPageProxyIPBind.Value,
-                        ConfigManager.Instance.WebPageProxyPort.Value);
-                WebPageProxy.UpdateCredential(Requester.UserID, Requester.TValue);
-                WebPageProxy.OnCredentialChange += OnCredentialsChange;
-                WebPageProxy.Start();
-                Console.ReadKey();
-                */
-
+                // Initialize data recorder
                 if (ConfigManager.Instance.SaveMethod.Value == RecordSaveMethod.File)
                 {
                     DataRecorder = new DataRecorderFile();
@@ -96,157 +87,33 @@ namespace MaimaiDXRecordSaver
                     return;
                 }
 
+                // Check login credential
                 if(!OfflineMode)
                 {
                     CheckAndEnterCredential();
                 }
 
-
+                // Start web page proxy
                 if (!OfflineMode && ConfigManager.Instance.WebPageProxyEnabled.Value)
                 {
-                    WebPageProxy = new WebPageProxy(ConfigManager.Instance.WebPageProxyIPBind.Value,
-                        ConfigManager.Instance.WebPageProxyPort.Value);
-                    WebPageProxy.UpdateCredential(Requester.UserID, Requester.TValue);
-                    WebPageProxy.OnCredentialChange += OnCredentialsChange;
+                    MIMEHelper.Initialize("MIMEMapping.txt");
+                    WebPageProxy = new WebPageProxy(
+                        ConfigManager.Instance.WebPageProxyIPBind.Value,
+                        ConfigManager.Instance.WebPageProxyPort.Value,
+                        ConfigManager.Instance.WebPageProxyServerStr.Value);
                     WebPageProxy.Start();
                 }
 
+                // Main loop
                 while (true)
                 {
                     Console.Write("> ");
                     string line = Console.ReadLine();
-                    bool exit = false;
+                    if (line.ToUpper().StartsWith("EXIT")) break;
                     if (!string.IsNullOrEmpty(line))
                     {
-                        string[] arr = line.Split(' ');
-                        string command = arr[0].ToUpper();
-                        switch (command)
-                        {
-                            case "HELP":
-                                Console.WriteLine(help);
-                                break;
-                            case "EXIT":
-                                exit = true;
-                                break;
-                            case "RECID":
-                                if (arr.Length >= 2)
-                                {
-                                    int index = 0;
-                                    if (int.TryParse(arr[1], out index))
-                                    {
-                                        Logger.Info("Command: RecID, index=" + index);
-                                        PrintMusicRecord(index);
-                                        SaveCredential();
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("Invalid number.");
-                                    }
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Missing arguments.");
-                                }
-                                break;
-                            case "RECLIST":
-                                PrintMusicRecordList();
-                                SaveCredential();
-                                break;
-                            case "PLAYERINFO":
-                                Logger.Info("Command: PlayerInfo");
-                                PrintPlayerInfo();
-                                SaveCredential();
-                                break;
-                            case "SAVEALL":
-                                Logger.Info("Command: SaveAll");
-                                AutoSaveRecords();
-                                SaveCredential();
-                                break;
-                            case "SAVEID":
-                                if (arr.Length >= 2)
-                                {
-                                    int index = 0;
-                                    if (int.TryParse(arr[1], out index))
-                                    {
-                                        Logger.Info("Command: SaveID");
-                                        SaveRecordID(index);
-                                        SaveCredential();
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("Invalid number.");
-                                    }
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Missing arguments.");
-                                }
-                                break;
-                            case "LOCALID":
-                                if (arr.Length >= 2)
-                                {
-                                    int index = 0;
-                                    if (int.TryParse(arr[1], out index))
-                                    {
-                                        Logger.Info("Command: LocalID");
-                                        if (DataRecorder.IsRecordExists(index))
-                                        {
-                                            MusicRecord rec = DataRecorder.GetMusicRecord(index);
-                                            Console.WriteLine(rec.ToString());
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine("Record not found.");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("Invalid number.");
-                                    }
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Missing arguments.");
-                                }
-                                break;
-                            case "LOCALRECENT":
-                                if (arr.Length >= 2)
-                                {
-                                    int num = 0;
-                                    if (int.TryParse(arr[1], out num))
-                                    {
-                                        Logger.Info("Command: LocalRecent");
-                                        int latestID = DataRecorder.GetLastRecordID();
-                                        int j = Math.Max(latestID - num + 1, 0);
-                                        for(int i = latestID; i >= j; i-- )
-                                        {
-                                            Console.WriteLine("Local ID " + i.ToString());
-                                            if(DataRecorder.IsRecordExists(i))
-                                            {
-                                                Console.Write(DataRecorder.GetMusicRecordSummary(i).ToString());
-                                            }
-                                            else
-                                            {
-                                                Console.WriteLine("Record not found!");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("Invalid number.");
-                                    }
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Missing arguments.");
-                                }
-                                break;
-                            default:
-                                Console.WriteLine("Unknown command! Type \"help\" for help.");
-                                break;
-                        }
+                        DispatchCommand(line);
                     }
-                    if (exit) break;
                 }
             }
             catch(Exception err)
@@ -256,10 +123,14 @@ namespace MaimaiDXRecordSaver
                 Console.WriteLine("Application crashed, press any key to continue :(");
                 Console.ReadKey();
             }
+
+            // Stop web page proxy
             if(WebPageProxy != null)
             {
                 WebPageProxy.Stop();
             }
+
+            // Save credential
             SaveCredential();
         }
 
@@ -310,13 +181,6 @@ namespace MaimaiDXRecordSaver
             {
                 SaveCredential(Requester.UserID, Requester.TValue);
             }
-            if (WebPageProxy != null)
-            {
-                lock(WebPageProxy)
-                {
-                    WebPageProxy.UpdateCredential(Requester.UserID, Requester.TValue);
-                }
-            }
         }
 
         public static void SaveCredential(string sessionID, string _t)
@@ -353,15 +217,6 @@ namespace MaimaiDXRecordSaver
             SaveCredential();
         }
 
-        private static void PrintPlayerInfo()
-        {
-            PlayerInfoPageParser parser = new PlayerInfoPageParser();
-            parser.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/playerData/"));
-            parser.Parse();
-            PlayerInfo obj = parser.GetResult();
-            Console.WriteLine(obj.ToString());
-        }
-
         private static void PrintMusicRecord(int index)
         {
             MusicRecordPageParser parser = new MusicRecordPageParser();
@@ -369,47 +224,6 @@ namespace MaimaiDXRecordSaver
             parser.Parse();
             MusicRecord obj = parser.GetResult();
             Console.WriteLine(obj.ToString());
-        }
-
-        private static void PrintMusicRecordList()
-        {
-            MusicRecordListPageParser parser = new MusicRecordListPageParser();
-            parser.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/"));
-            parser.Parse();
-            List<MusicRecordSummary> list = parser.GetResult();
-            for(int i = 0; i < list.Count; i++ )
-            {
-                Console.Write(i.ToString() + ". " + list[i].ToString());
-            }
-        }
-
-        private static void AutoSaveRecords()
-        {
-            MusicRecordListPageParser parser1 = new MusicRecordListPageParser();
-            parser1.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/"));
-            parser1.Parse();
-            List<MusicRecordSummary> list = parser1.GetResult();
-            int[] indices = DataRecorder.GetRecordIndicesNeedToSave(list);
-            MusicRecordPageParser parser2 = new MusicRecordPageParser();
-            for(int i = indices.Length - 1; i >= 0; i-- )
-            {
-                int index = indices[i];
-                Logger.Info("AutoSaveRecords: Saving record, idx=" + index.ToString());
-                parser2.LoadPage(Requester.RequestString("https://maimai.wahlap.com/maimai-mobile/record/playlogDetail/?idx=" + index.ToString()));
-                parser2.Parse();
-                MusicRecord rec = parser2.GetResult();
-                if(DataRecorder.SaveMusicRecord(rec) == -1)
-                {
-                    Logger.Warn("AutoSaveRecords: Failed to save music record, index=" + index.ToString());
-                }
-                Thread.Sleep(500);
-            }
-        }
-
-        private static bool IsServerClosedNow()
-        {
-            DateTime now = DateTime.Now;
-            return now.Hour >= 4 && now.Hour <= 7;
         }
 
         private static void SaveRecordID(int index)

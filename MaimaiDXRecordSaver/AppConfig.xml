@@ -22,5 +22,14 @@
     <!-- 网页代理中所有原来的域名(maimai.wahlap.com)将会被替换为此IP或域名+端口号 -->
     <IPBind>127.0.0.1</IPBind>
     <Port>9999</Port>
+    <!-- 网页代理HTTP响应的Server标头 -->
+    <!-- 设置为空字符串以禁用Server标头 -->
+    <ServerHeader>MaimaiDXRecordSaver/{VERSION}</ServerHeader>
+    <AllowLogout>False</AllowLogout>
+    <AllowChangeName>False</AllowChangeName>
   </WebPageProxy>
+  <WechatLoginProxy>
+    <Enabled>True</Enabled>
+    <Port>9998</Port>
+  </WechatLoginProxy>
 </XmlConfig>

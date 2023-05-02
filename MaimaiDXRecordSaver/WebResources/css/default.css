@@ -1,0 +1,66 @@
+@charset "utf-8";
+/* CSS Document */
+
+body {
+	background: #51bcf3;
+}
+
+h1 {
+	margin: 0;
+	margin-bottom: 0.3em;
+}
+
+div.content-box {
+	background-color: rgba(255, 255, 255, 0.75);
+	text-align: center;
+	box-sizing: border-box;
+	padding: 2em;
+}
+
+@media(min-width: 768px) {
+	div.content-box {
+		border-radius: 1em;
+		margin: auto;
+		margin-top: 5em;
+		margin-bottom: 5em;
+		width: 50%;
+	}
+}
+
+@media(max-width: 767px) {
+	html,body {
+		height: 100%;
+		margin: 0;
+		padding: 0;
+	}
+	
+	div.content-box {
+		height: 100%;
+	}
+}
+
+div.line {
+	border: 1px solid #666;
+	margin: 1em;
+}
+
+span.tips {
+	color: #999;
+}
+
+button.button {
+	border-radius: 0.5em;
+	cursor: pointer;
+	font-size: 1em;
+	margin: 1em;
+	padding: 0.6em;
+	padding-left: 1.2em;
+	padding-right: 1.2em;
+	border: 1px solid;
+}
+
+button.green {
+	background-color: forestgreen;
+	border-color: darkgreen;
+	color: white;
+}

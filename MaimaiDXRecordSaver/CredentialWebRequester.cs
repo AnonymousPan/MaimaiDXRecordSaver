@@ -170,7 +170,8 @@ namespace MaimaiDXRecordSaver
                 {
                     CredentialWebRequest req = tuple.Item1;
                     AutoResetEvent waitHandle = tuple.Item2;
-                    logger.Debug("Requesting url: " + req.URL);
+                    string postFlag = req.IsPost ? "[POST] " : "";
+                    logger.Debug("Requesting url: " + postFlag + req.URL);
 
                     CredentialWebResponse resp = null;
                     HttpWebResponse httpResp = null;
@@ -197,8 +198,14 @@ namespace MaimaiDXRecordSaver
                                 {
                                     memStream.Write(buf, 0, readCount);
                                 }
-                                resp = new CredentialWebResponse(memStream.ToArray(), httpResp.ContentType);
+                                resp = new CredentialWebResponse((int)httpResp.StatusCode, memStream.ToArray(), httpResp.ContentType);
                             }
+                        }
+
+                        // HTTP status code 301 / 302
+                        if(httpResp.StatusCode == HttpStatusCode.Moved || httpResp.StatusCode == HttpStatusCode.Found)
+                        {
+                            resp.Location = httpResp.Headers["Location"];
                         }
                         
                         // Update credential cookies

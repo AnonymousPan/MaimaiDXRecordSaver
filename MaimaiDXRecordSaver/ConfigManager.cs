@@ -24,6 +24,13 @@ namespace MaimaiDXRecordSaver
         public ConfigEntryBool WebPageProxyEnabled { get; private set; }
         public ConfigEntryString WebPageProxyIPBind { get; private set; }
         public ConfigEntryInt32 WebPageProxyPort { get; private set; }
+        public ConfigEntryString WebPageProxyServerStr { get; private set; }
+        public ConfigEntryBool WebPageProxyAllowLogout { get; private set; }
+        public ConfigEntryBool WebPageProxyAllowChangeName { get; private set; }
+
+        // WechatLoginProxy
+        public ConfigEntryBool WechatLoginProxyEnabled { get; private set; }
+        public ConfigEntryInt32 WechatLoginProxyPort { get; private set; }
 
         public ConfigManager(string path)
         {
@@ -56,6 +63,13 @@ namespace MaimaiDXRecordSaver
             WebPageProxyEnabled = new ConfigEntryBool(ConfigFile, "WebPageProxy", "Enabled", true, null);
             WebPageProxyIPBind = new ConfigEntryString(ConfigFile, "WebPageProxy", "IPBind", "127.0.0.1", null);
             WebPageProxyPort = new ConfigEntryInt32(ConfigFile, "WebPageProxy", "Port", 9999, null);
+            WebPageProxyServerStr = new ConfigEntryString(ConfigFile, "WebPageProxy", "ServerHeader", "", null);
+            WebPageProxyAllowLogout = new ConfigEntryBool(ConfigFile, "WebPageProxy", "AllowLogout", false, null);
+            WebPageProxyAllowChangeName = new ConfigEntryBool(ConfigFile, "WebPageProxy", "AllowChangeName", false, null);
+
+            // WechatLoginProxy
+            WechatLoginProxyEnabled = new ConfigEntryBool(ConfigFile, "WechatLoginProxy", "Enabled", true, null);
+            WechatLoginProxyPort = new ConfigEntryInt32(ConfigFile, "WechatLoginProxy", "Port", 9998, null);
 
             Instance = this;
         }

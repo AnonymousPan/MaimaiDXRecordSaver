@@ -7,6 +7,7 @@ namespace MaimaiDXRecordSaver
 {
     public class CredentialWebRequest
     {
+        public bool IsPost { get; set; } = false;
         public string URL { get; private set; }
         public string ContentType { get; private set; }
         public byte[] ContentBytes { get; private set; }
@@ -25,7 +26,7 @@ namespace MaimaiDXRecordSaver
         {
             HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(URL);
             req.AllowAutoRedirect = false;
-            req.Method = "GET";
+            req.Method = IsPost ? "POST" : "GET";
             CookieCollection cookies = new CookieCollection();
             cookies.Add(new Cookie("userId", userId, "/", "maimai.wahlap.com"));
             cookies.Add(new Cookie("_t", tValue, "/", "maimai.wahlap.com"));

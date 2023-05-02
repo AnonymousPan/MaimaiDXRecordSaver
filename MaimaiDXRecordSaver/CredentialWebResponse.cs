@@ -7,8 +7,11 @@ namespace MaimaiDXRecordSaver
 {
     public class CredentialWebResponse
     {
+        public int StatusCode { get; private set; }
         public byte[] ContentBytes { get; private set; }
         public string ContentType { get; private set; }
+
+        public string Location { get; set; }
 
         public bool CredentialChanged { get; private set; } = false;
         public string NewUserID { get; private set; }
@@ -32,9 +35,10 @@ namespace MaimaiDXRecordSaver
         /// </summary>
         /// <param name="contentBytes">Content bytes</param>
         /// <param name="contentType">Content-Type string</param>
-        public CredentialWebResponse(byte[] contentBytes, string contentType)
+        public CredentialWebResponse(int statusCode, byte[] contentBytes, string contentType)
         {
             Failed = false;
+            StatusCode = statusCode;
             ContentBytes = contentBytes;
             ContentType = contentType;
         }

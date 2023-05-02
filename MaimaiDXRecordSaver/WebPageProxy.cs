@@ -2,43 +2,58 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Net;
 using log4net;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Net.Http;
 
 namespace MaimaiDXRecordSaver
 {
     public class WebPageProxy
     {
-        private HttpListener listener;
-        private Thread reqProcThread;
+        private Thread webPageProxyThread;
         private bool running = false;
         private ILog logger = LogManager.GetLogger("WebPageProxy");
         private string ipBind = "";
         private int port = 0;
 
-        private string sessionID = "";
-        private string _t = "";
+        private HttpClient httpClient;
 
-        public delegate void OnCredentialChangeEventHandler(string sessionID, string _t);
-        public event OnCredentialChangeEventHandler OnCredentialChange;
+        private MyHttpServer httpServer;
 
-        public WebPageProxy(string ip, int _port)
+        private bool serverHeaderEnabled = false;
+        private string serverHeaderString;
+
+        private Dictionary<string, byte[]> webResources;
+        private Dictionary<string, string> webResourcesMime;
+
+        public WebPageProxy(string ip, int _port, string serverString)
         {
             ipBind = ip;
             port = _port;
-            listener = new HttpListener();
-            listener.Prefixes.Add(string.Format("http://+:{0}/", port));
-            reqProcThread = new Thread(ProcessRequest);
-            reqProcThread.IsBackground = true;
+            webPageProxyThread = new Thread(WebPageProxyThreadProc);
+            webPageProxyThread.IsBackground = true;
+
+            httpClient = new HttpClient();
+
+            httpServer = new MyHttpServer(new IPAddress(0L), port);
+
+            if(!string.IsNullOrEmpty(serverString))
+            {
+                serverHeaderEnabled = true;
+                serverHeaderString = serverString.Replace("{VERSION}", Program.Version);
+            }
+
+            webResources = new Dictionary<string, byte[]>();
+            webResourcesMime = new Dictionary<string, string>();
         }
 
         public void Start()
         {
             running = true;
-            listener.Start();
-            reqProcThread.Start();
-            logger.Info(string.Format("Web page proxy started at {0}:{1}", ipBind, port));
+            webPageProxyThread.Start();
         }
 
         public void Stop()
@@ -46,8 +61,7 @@ namespace MaimaiDXRecordSaver
             try
             {
                 running = false;
-                listener.Stop();
-                reqProcThread.Abort();
+                webPageProxyThread.Abort();
                 logger.Info("Web page proxy stopped.");
             }
             catch(Exception err)
@@ -57,144 +71,355 @@ namespace MaimaiDXRecordSaver
             }
         }
 
-        public void UpdateCredential(string s, string t)
+        private void WebPageProxyThreadProc()
         {
-            sessionID = s;
-            _t = t;
-        }
-
-        private void ProcessRequest()
-        {
-            logger.Info("Request processing thread started.");
+            LoadResources();
+            logger.Info(string.Format("Web page proxy started at {0}:{1}", ipBind, port));
+            httpServer.Start();
             while(running)
             {
-                string url = "N/A";
-                string ip = "N/A";
+                string reqUrl = "N/A";
                 try
                 {
-                    // Wait for connection
-                    HttpListenerContext context = listener.GetContext();
+                    httpServer.WaitForRequest();
                     
-                    HttpListenerRequest req = context.Request;
-                    url = req.RawUrl;
-                    ip = req.RemoteEndPoint.ToString();
-                    HttpListenerResponse resp = context.Response;
-                    if (req.RawUrl == "/")
+                    if (httpServer.CurrentRequestValid)
                     {
-                        logger.Info("WebPageProxy: Connecting from " + req.RemoteEndPoint.ToString());
-                        using (StreamWriter writter = new StreamWriter(resp.OutputStream))
+                        string url = httpServer.CurrentRequest.URL;
+                        reqUrl = url;
+                        string lowerUrl = url.ToLower();
+
+                        if(!ConfigManager.Instance.WebPageProxyAllowLogout.Value
+                            && lowerUrl.Contains("logout")
+                            && lowerUrl.Contains("maimai-mobile"))
                         {
-                            string str = htmlText.Replace("HOST", ipBind + ":" + port.ToString());
-                            //str = str.Replace("SESSIONID", sessionID);
-                            //str = str.Replace("TVALUE", _t);
-                            writter.Write(str);
-                            resp.StatusCode = 200;
+                            // Logout not allowed
+                            ProcessReq_TempRedir("/res/no_logout.html");
                         }
-                    }
-                    else if (req.RawUrl.Contains("/maimai-mobile/home/userOption/logout"))
-                    {
-                        logger.Info("WebPageProxy: Logout clicked, from " + req.RemoteEndPoint.ToString());
-                        using (StreamWriter writter = new StreamWriter(resp.OutputStream))
+                        else if(!ConfigManager.Instance.WebPageProxyAllowChangeName.Value
+                            && lowerUrl.Contains("maimai-mobile/home/useroption/updateusername/update"))
                         {
-                            string str = "You clicked logout. I'm sure that was a mistake!";
-                            writter.Write(str);
-                            resp.StatusCode = 200;
+                            // Change name not allowed
+                            ProcessReq_TempRedir("/res/no_changename.html");
                         }
-                    }
-                    else if (req.RawUrl.Contains("maimai-mobile/"))
-                    {
-                        DoProxy(req, resp);
+                        else if(url.StartsWith("/maimai-mobile"))
+                        {
+                            // MaimaiDX pages
+                            if(IsCredentialNeeded(url))
+                            {
+                                ProcessReq_MaimaiDXPage_Credential(url);
+                            }
+                            else
+                            {
+                                ProcessReq_MaimaiDXPage_NoCredential(url);
+                            }
+                        }
+                        else if(url.StartsWith("/res/"))
+                        {
+                            // Local resources
+                            ProcessReq_LocalResources(url);
+                        }
+                        else if(url == "/")
+                        {
+                            // Index
+                            ProcessReq_Index();
+                        }
+                        else
+                        {
+                            // Not found
+                            ProcessReq_NotFound();
+                        }
                     }
                     else
                     {
-                        logger.Info(string.Format("WebPageProxy: Invalid URL {0} from {1}", req.RawUrl, req.RemoteEndPoint.ToString()));
-                        using (StreamWriter writter = new StreamWriter(resp.OutputStream))
-                        {
-                            string str = "Invalid URL: " + req.RawUrl;
-                            writter.Write(str);
-                            resp.StatusCode = 400;
-                        }
+                        // Bad request
+                        ProcessReq_BadRequest();
                     }
-
-                    // Send response
-                    resp.Close();
                 }
                 catch(Exception err)
                 {
-                    logger.Warn(string.Format("Error while processing request! URL = {0} from {1}", url, ip));
-                    logger.Warn(err.ToString());
+                    string reqIp = httpServer.CurrentRequestEndPoint == null ? "N/A"
+                        : httpServer.CurrentRequestEndPoint.ToString();
+                    logger.WarnFormat("Failed to process request [IP={0} URL={1}]\n{2}", reqIp, reqUrl, err.ToString());
                 }
             }
-            logger.Info("Request processing thread terminated.");
+            logger.Info("Web page proxy thread exited");
         }
 
-        private void DoProxy(HttpListenerRequest mRequest, HttpListenerResponse mResponse)
+        private void AddServerHeader(HttpResponse resp)
         {
-            string url = "https://maimai.wahlap.com" + mRequest.RawUrl;
-            HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(url);
-            req.AllowAutoRedirect = false;
-            req.Method = mRequest.HttpMethod;
-            req.ContentType = mRequest.ContentType;
-            CookieCollection cookies = new CookieCollection();
-            cookies.Add(new Cookie("userId", sessionID, "/", "maimai.wahlap.com"));
-            cookies.Add(new Cookie("_t", _t, "/", "maimai.wahlap.com"));
-            req.CookieContainer = new CookieContainer();
-            req.CookieContainer.Add(cookies);
-            if(mRequest.ContentLength64 > 0)
+            if(serverHeaderEnabled)
             {
-                req.ContentLength = mRequest.ContentLength64;
-                mRequest.InputStream.CopyTo(req.GetRequestStream());
+                resp.Headers.Add("Server", serverHeaderString);
             }
-            HttpWebResponse resp;
-            try
+        }
+
+        private bool IsCredentialNeeded(string url)
+        {
+            int index = url.IndexOf("/maimai-mobile/");
+            if(index > -1)
             {
-                resp = (HttpWebResponse)req.GetResponse();
+                index += 15; // Length of "/maimai-mobile/"
+                string str = url.Substring(index);
+                if (str.StartsWith("img/Icon/")) return true;
+                if (str.StartsWith("img/photo/")) return true;
+                if (str.StartsWith("apple-touch-icon.png")) return false;
+                return !str.StartsWith("img/") && !str.StartsWith("js/") && !str.StartsWith("css/");
             }
-            catch(WebException err)
+            else
             {
-                resp = (HttpWebResponse)err.Response;
+                return false;
             }
-            mResponse.StatusCode = (int)resp.StatusCode;
-            if(resp.StatusCode == HttpStatusCode.MovedPermanently || resp.StatusCode == HttpStatusCode.Found)
+        }
+
+        private void LoadResources()
+        {
+            logger.Info("Loading web resources");
+            if(Directory.Exists("WebResources"))
             {
-                string str = resp.Headers["Location"];
-                str = str.Replace("https://maimai.wahlap.com", string.Format("http://{0}:{1}", ipBind, port.ToString()));
-                mResponse.RedirectLocation = str;
+                string rootPath = Path.GetFullPath("WebResources") + "\\";
+                LoadResDirectory(rootPath, rootPath);
+                // Generate MIME type strings
+                foreach(string relPath in webResources.Keys)
+                {
+                    string mime = MIMEHelper.Instance.GetMIMEType(relPath);
+                    if(string.IsNullOrEmpty(mime))
+                    {
+                        logger.WarnFormat("MIME type of file {0} is unknown", relPath);
+                        webResourcesMime.Add(relPath, null);
+                    }
+                    else
+                    {
+                        webResourcesMime.Add(relPath, mime);
+                    }
+                }
+                ProcessHtml();
+                logger.InfoFormat("Loaded {0} web resources", webResources.Count);
             }
-            mResponse.ContentType = resp.ContentType;
-            // mResponse.ContentLength64 = resp.ContentLength;
-            if(resp.Cookies["userId"] != null)
+            else
             {
-                sessionID = resp.Cookies["userId"].Value;
-                _t = resp.Cookies["_t"].Value;
-                OnCredentialChange(sessionID, _t);
+                logger.Warn("WebResources directory not found");
             }
-            
-            // Rewrite url
-            if(resp.ContentType.Contains("text/html"))
+        }
+
+        private void LoadResFile(string rootPath, string fullPath)
+        {
+            string relativePath = fullPath.Substring(rootPath.Length);
+            webResources.Add(relativePath.Replace('\\', '/'), File.ReadAllBytes(fullPath));
+        }
+
+        private void LoadResDirectory(string rootPath, string fullPath)
+        {
+            string[] files = Directory.GetFiles(fullPath);
+            foreach(string file in files)
             {
-                logger.Info(string.Format("WebPageProxy: Requesting url {0} from {1}", url, mRequest.RemoteEndPoint.ToString()));
+                LoadResFile(rootPath, file);
+            }
+            string[] directories = Directory.GetDirectories(fullPath);
+            foreach(string dir in directories)
+            {
+                LoadResDirectory(rootPath, dir);
+            }
+        }
+
+        private void ProcessHtml()
+        {
+            foreach(KeyValuePair<string, string> kvPair in webResourcesMime)
+            {
+                if(kvPair.Value == "text/html")
+                {
+                    byte[] bytes = webResources[kvPair.Key];
+                    string content = Encoding.UTF8.GetString(bytes);
+                    content = content.Replace("{VERSION}", Program.Version);
+                    webResources[kvPair.Key] = Encoding.UTF8.GetBytes(content);
+                }
+            }
+        }
+
+        private string RewriteURL(string content)
+        {
+            string replacement = string.Format("http://{0}:{1}", ipBind, port);
+            string[] arr = content.Split(new string[] { "https://maimai.wahlap.com" }
+                , StringSplitOptions.None);
+            StringBuilder sb = new StringBuilder();
+            sb.Append(arr[0]);
+            for(int i = 1; i < arr.Length; i++ )
+            {
+                string str = arr[i].Length > 64 ? arr[i].Substring(0, 64) : arr[i];
+                if(IsCredentialNeeded(str))
+                {
+                    sb.Append(replacement);
+                }
+                else
+                {
+                    sb.Append("https://maimai.wahlap.com");
+                }
+                sb.Append(arr[i]);
+            }
+            return sb.ToString();
+        }
+
+        private void ProcessReq_MaimaiDXPage_Credential(string url)
+        {
+            CredentialWebRequest req;
+            byte[] cb = httpServer.CurrentRequest.ContentBytes;
+            if (cb != null && cb.Length > 0)
+            {
+                string ct;
+                if (!httpServer.CurrentRequest.Headers.TryGetValue("Content-Type", out ct))
+                {
+                    ct = "";
+                }
+                req = new CredentialWebRequest("https://maimai.wahlap.com" + url, ct, cb);
+            }
+            else
+            {
+                req = new CredentialWebRequest("https://maimai.wahlap.com" + url);
+            }
+
+            req.IsPost = httpServer.CurrentRequest.Method == "POST";
+
+            CredentialWebResponse resp = Program.Requester.Request(req);
+            if (resp.Failed)
+            {
+                logger.InfoFormat("Requesting URL {0} (failed) from {1}", url, httpServer.CurrentRequestEndPoint.ToString());
+                HttpResponse httpResp = HttpResponse.CreateDefaultResponse(500);
+                AddServerHeader(httpResp);
+                httpResp.ContentBytes = Encoding.UTF8.GetBytes(
+                    "Failed to request, please check logs for more information.");
+                httpServer.SendResponse(httpResp);
+            }
+            else
+            {
+                HttpResponse httpResp = HttpResponse.CreateDefaultResponse(resp.StatusCode);
+                AddServerHeader(httpResp);
+                if (!string.IsNullOrEmpty(resp.Location))
+                {
+                    httpResp.Headers.Add("Location", RewriteURL(resp.Location));
+                }
+                httpResp.ContentType = resp.ContentType;
+                if (resp.ContentType.StartsWith("text/html"))
+                {
+                    logger.InfoFormat("Requesting URL {0} from {1}", url, httpServer.CurrentRequestEndPoint.ToString());
+                    string content = Encoding.UTF8.GetString(resp.ContentBytes);
+                    content = RewriteURL(content);
+                    httpResp.ContentBytes = Encoding.UTF8.GetBytes(content);
+                }
+                else
+                {
+                    httpResp.ContentBytes = resp.ContentBytes;
+                }
+                httpServer.SendResponse(httpResp);
+            }
+        }
+
+        private void ProcessReq_MaimaiDXPage_NoCredential(string url)
+        {
+            HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create("https://maimai.wahlap.com" + url);
+            req.Method = httpServer.CurrentRequest.Method;
+            byte[] cb = httpServer.CurrentRequest.ContentBytes;
+            if (cb != null && cb.Length > 0)
+            {
+                using (Stream reqStream = req.GetRequestStream())
+                {
+                    reqStream.Write(cb, 0, cb.Length);
+                }
+            }
+            HttpWebResponse resp = (HttpWebResponse)req.GetResponse();
+            HttpResponse httpResp = HttpResponse.CreateDefaultResponse(200);
+            httpResp.ContentType = resp.ContentType;
+            if (resp.ContentType.StartsWith("text/html"))
+            {
+                logger.InfoFormat("Requesting URL {0} (no credential) from {1}", url, httpServer.CurrentRequestEndPoint.ToString());
                 using (StreamReader reader = new StreamReader(resp.GetResponseStream()))
                 {
-                    string str = reader.ReadToEnd();
-                    str = str.Replace("https://maimai.wahlap.com", string.Format("http://{0}:{1}", ipBind, port.ToString()));
-                    byte[] bytes = Encoding.UTF8.GetBytes(str);
-                    mResponse.OutputStream.Write(bytes, 0, bytes.Length);
+                    string content = reader.ReadToEnd();
+                    content = RewriteURL(content);
+                    httpResp.ContentBytes = Encoding.UTF8.GetBytes(content);
                 }
             }
             else
             {
-                resp.GetResponseStream().CopyTo(mResponse.OutputStream);
+                using (Stream respStream = resp.GetResponseStream())
+                {
+                    using (MemoryStream memStream = new MemoryStream())
+                    {
+                        byte[] buf = new byte[4096];
+                        int readCount;
+                        while ((readCount = respStream.Read(buf, 0, 4096)) > 0)
+                        {
+                            memStream.Write(buf, 0, readCount);
+                        }
+                        httpResp.ContentBytes = memStream.ToArray();
+                    }
+                }
+            }
+            AddServerHeader(httpResp);
+            httpServer.SendResponse(httpResp);
+            resp.Dispose();
+        }
+
+        private void ProcessReq_LocalResources(string url)
+        {
+            string relPath = url.Substring(5);
+            if (!string.IsNullOrEmpty(relPath) && webResources.TryGetValue(relPath, out byte[] contentBytes))
+            {
+                HttpResponse resp = HttpResponse.CreateDefaultResponse(200);
+                AddServerHeader(resp);
+                if (webResourcesMime.TryGetValue(relPath, out string mime))
+                {
+                    if (!string.IsNullOrEmpty(mime)) resp.ContentType = mime;
+                }
+                resp.ContentBytes = contentBytes;
+                httpServer.SendResponse(resp);
+            }
+            else
+            {
+                // Not found
+                ProcessReq_NotFound();
             }
         }
 
-        private static string htmlText =
-            "<!DOCTYPE html><html><head><title>MaimaiDXRecordSaver - WebPageProxy</title>" +
-            "<body><b>Congratulations!</b>" +
-            "<p>If you see this message, it means the WebPageProxy is working.</p>" +
-            "<a href=\"http://HOST/maimai-mobile/home/\">Click here to view your game data.</a>" +
-            "<p>userId = SESSIONID</p>" +
-            "<p>_t = TVALUE</p>" +
-            "</body></html>";
+        private void ProcessReq_Index()
+        {
+            logger.InfoFormat("Requesting index.html from {0}", httpServer.CurrentRequestEndPoint.ToString());
+            HttpResponse resp = HttpResponse.CreateDefaultResponse(200);
+            AddServerHeader(resp);
+            resp.ContentType = "text/html";
+            if (webResources.TryGetValue("index.html", out byte[] contentBytes))
+            {
+                resp.ContentBytes = contentBytes;
+            }
+            else
+            {
+                resp.ContentBytes = Encoding.UTF8.GetBytes("index.html not found.");
+            }
+            httpServer.SendResponse(resp);
+        }
+
+        private void ProcessReq_NotFound()
+        {
+            logger.InfoFormat("Requesting a non-exist URL {0} from {1}",
+                httpServer.CurrentRequest.URL, httpServer.CurrentRequestEndPoint.ToString());
+            HttpResponse resp = HttpResponse.CreateDefaultResponse(404);
+            AddServerHeader(resp);
+            httpServer.SendResponse(resp);
+        }
+
+        private void ProcessReq_BadRequest()
+        {
+            logger.InfoFormat("Bad request from {0}", httpServer.CurrentRequestEndPoint.ToString());
+            HttpResponse resp = HttpResponse.CreateDefaultResponse(400);
+            AddServerHeader(resp);
+            httpServer.SendResponse(resp);
+        }
+
+        private void ProcessReq_TempRedir(string location)
+        {
+            HttpResponse resp = HttpResponse.CreateDefaultResponse(302);
+            AddServerHeader(resp);
+            resp.Headers.Add("Location", location);
+            httpServer.SendResponse(resp);
+        }
     }
 }
