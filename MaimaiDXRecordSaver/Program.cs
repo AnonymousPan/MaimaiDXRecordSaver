@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.NetworkInformation;
 using log4net;
 using MaimaiDXRecordSaver.PageParser;
 using System.Threading;
+using System.Text;
+using System.Net.Sockets;
 
 namespace MaimaiDXRecordSaver
 {
     public static partial class Program
     {
-        public static readonly string Version = "1.1.2";
+        public static readonly string Version = "1.1.3";
         public static ILog Logger = LogManager.GetLogger("Default");
         public static CredentialWebRequester Requester = null;
         public static DataRecorderBase DataRecorder = null;
@@ -47,24 +50,20 @@ namespace MaimaiDXRecordSaver
                 }
                 
                 // Load credential
-                string sessionID, _t;
-                if (LoadCredential(out sessionID, out _t))
+                string userId, _t;
+                if (LoadCredential(out userId, out _t))
                 {
                     Logger.Info("成功加载登录凭据");
                 }
                 else
                 {
-                    Logger.Info("未找到已保存的登录凭据");
-                    Console.WriteLine("请输入你的登录凭据");
-                    Console.Write("userId: ");
-                    sessionID = Console.ReadLine();
-                    Console.Write("_t: ");
-                    _t = Console.ReadLine();
-                    SaveCredential(sessionID, _t);
+                    Logger.Warn("未找到已保存的登录凭据");
+                    userId = "";
+                    _t = "";
                 }
 
                 // Start credential web requester
-                Requester = new CredentialWebRequester(sessionID, _t);
+                Requester = new CredentialWebRequester(userId, _t);
                 Requester.Start();
 
                 // Initialize data recorder
@@ -209,6 +208,35 @@ namespace MaimaiDXRecordSaver
 
         public static void EnterCredential()
         {
+            if(ConfigManager.Instance.WechatLoginProxyEnabled.Value)
+            {
+                WechatLoginProxy wechatLoginProxy = new WechatLoginProxy(
+                    ConfigManager.Instance.WechatLoginProxyPort.Value,
+                    ConfigManager.Instance.WechatLoginProxyUrlWhitelist.Value
+                );
+                PrintLocalIPs();
+                wechatLoginProxy.Start();
+                Console.WriteLine("已启动微信登录代理，按任意键来手动输入登录凭据");
+                Console.WriteLine("请设置代理并在微信中打开此URL: http://tgk-wcaime.wahlap.com/wc_auth/oauth/authorize/maimai-dx");
+                while (!wechatLoginProxy.CredentialCaptured)
+                {
+                    Thread.Sleep(500);
+                    if(Console.KeyAvailable)
+                    {
+                        Console.ReadKey();
+                        break;
+                    }
+                }
+                wechatLoginProxy.Stop();
+                if(wechatLoginProxy.CredentialCaptured)
+                {
+                    Console.WriteLine("微信登录成功(不要忘记改回代理设置)");
+                    Requester.UserID = wechatLoginProxy.UserID;
+                    Requester.TValue = wechatLoginProxy.TValue;
+                    SaveCredential();
+                    return;
+                }
+            }
             Console.WriteLine("请输入你的登录凭据");
             Console.Write("userId: ");
             Requester.UserID = Console.ReadLine();
@@ -261,6 +289,28 @@ namespace MaimaiDXRecordSaver
             }
 
             Logger.Info("记录已移动至数据库");
+        }
+
+        private static void PrintLocalIPs()
+        {
+            NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
+            Console.WriteLine("[提示] 本机IP地址: ");
+            foreach(NetworkInterface i in interfaces)
+            {
+                IPInterfaceProperties ip = i.GetIPProperties();
+                UnicastIPAddressInformationCollection unicastIPInfoColl = ip.UnicastAddresses;
+                foreach(UnicastIPAddressInformation unicastIPInfo in unicastIPInfoColl)
+                {
+                    AddressFamily addrFamily = unicastIPInfo.Address.AddressFamily;
+                    if(addrFamily == AddressFamily.InterNetwork
+                        || addrFamily == AddressFamily.InterNetworkV6)
+                    {
+                        Console.WriteLine(string.Format("{0} - {1}",
+                            unicastIPInfo.Address.ToString(),
+                            i.Name));
+                    }
+                }
+            }
         }
 
         private static string help =

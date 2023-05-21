@@ -31,5 +31,6 @@
   <WechatLoginProxy>
     <Enabled>True</Enabled>
     <Port>9998</Port>
+    <UrlWhitelist>True</UrlWhitelist>
   </WechatLoginProxy>
 </XmlConfig>

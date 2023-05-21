@@ -8,7 +8,7 @@ namespace MaimaiDXRecordSaver
     public class HttpRequest
     {
         public const int MaxUrlLength = 256;
-        public const int MaxHeaderLineLength = 256;
+        public const int MaxHeaderLineLength = 512;
         public const int MaxContentLength = 16384;
 
         public string Method { get; private set; }

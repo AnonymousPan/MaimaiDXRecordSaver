@@ -31,6 +31,7 @@ namespace MaimaiDXRecordSaver
             ipBind = ip;
             port = _port;
             webPageProxyThread = new Thread(WebPageProxyThreadProc);
+            webPageProxyThread.Name = "WebPageProxy Thread";
             webPageProxyThread.IsBackground = true;
 
             httpServer = new MyHttpServer(new IPAddress(0L), port);

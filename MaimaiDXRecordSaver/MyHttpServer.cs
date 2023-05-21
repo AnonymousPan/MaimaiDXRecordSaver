@@ -81,5 +81,16 @@ namespace MaimaiDXRecordSaver
 
             CloseCurrentConnection();
         }
+
+        /// <summary>
+        /// Take over the current TCP connection
+        /// </summary>
+        /// <returns>TcpClient object of current connection</returns>
+        public TcpClient HandleConnection()
+        {
+            TcpClient cli = currentClient;
+            currentClient = null;
+            return cli;
+        }
     }
 }

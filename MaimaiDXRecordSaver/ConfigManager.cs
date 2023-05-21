@@ -31,6 +31,7 @@ namespace MaimaiDXRecordSaver
         // WechatLoginProxy
         public ConfigEntryBool WechatLoginProxyEnabled { get; private set; }
         public ConfigEntryInt32 WechatLoginProxyPort { get; private set; }
+        public ConfigEntryBool WechatLoginProxyUrlWhitelist { get; private set; }
 
         public ConfigManager(string path)
         {
@@ -70,6 +71,7 @@ namespace MaimaiDXRecordSaver
             // WechatLoginProxy
             WechatLoginProxyEnabled = new ConfigEntryBool(ConfigFile, "WechatLoginProxy", "Enabled", true, null);
             WechatLoginProxyPort = new ConfigEntryInt32(ConfigFile, "WechatLoginProxy", "Port", 9998, null);
+            WechatLoginProxyUrlWhitelist = new ConfigEntryBool(ConfigFile, "WechatLoginProxy", "UrlWhitelist", true, null);
 
             Instance = this;
         }
