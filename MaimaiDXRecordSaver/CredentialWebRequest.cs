@@ -22,7 +22,7 @@ namespace MaimaiDXRecordSaver
 
         public CredentialWebRequest(string url) : this(url, null, null) { }
 
-        public HttpWebRequest CreateHttpWebRequest(string userId, string tValue, string uaString)
+        public HttpWebRequest CreateHttpWebRequest(string userId, string tValue, string uaString, string friendCodeList)
         {
             HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(URL);
             req.AllowAutoRedirect = false;
@@ -30,6 +30,10 @@ namespace MaimaiDXRecordSaver
             CookieCollection cookies = new CookieCollection();
             cookies.Add(new Cookie("userId", userId, "/", "maimai.wahlap.com"));
             cookies.Add(new Cookie("_t", tValue, "/", "maimai.wahlap.com"));
+            if(!string.IsNullOrEmpty(friendCodeList))
+            {
+                cookies.Add(new Cookie("friendCodeList", friendCodeList, "/", "maimai.wahlap.com"));
+            }
             req.CookieContainer = new CookieContainer();
             req.CookieContainer.Add(cookies);
             req.UserAgent = uaString;

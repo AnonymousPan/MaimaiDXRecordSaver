@@ -8,7 +8,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace MaimaiDXRecordSaver
 {
@@ -29,6 +28,8 @@ namespace MaimaiDXRecordSaver
         private object userIdLock = new object();
         private string m_tValue;
         private object tValueLock = new object();
+        private string m_friendCodeList;
+        private object friendCodeListLock = new object();
 
         private static readonly byte[] urlNotWhitelistedMsg = Encoding.UTF8.GetBytes("MaimaiDXRecordSaver-WechatLoginProxy: This URL is not whitelisted.");
         private static readonly byte[] closeWindowMsg = Encoding.UTF8.GetBytes("MaimaiDXRecordSaver-WechatLoginProxy: Logged in successfully. You can close the window now.");
@@ -88,6 +89,23 @@ namespace MaimaiDXRecordSaver
             }
         }
 
+        public string FriendCodeList
+        {
+            get
+            {
+                lock(friendCodeListLock)
+                {
+                    return m_friendCodeList;
+                }
+            }
+            private set
+            {
+                lock(friendCodeListLock)
+                {
+                    m_friendCodeList = value;
+                }
+            }
+        }
 
         public WechatLoginProxy(int _port, bool _whitelist)
         {
@@ -486,8 +504,10 @@ namespace MaimaiDXRecordSaver
 
                 string userId = null;
                 string _t = null;
+                string friendCodeList = null;
                 Regex userIdRegex = new Regex("userId=[0-9a-z]+");
                 Regex _tRegex = new Regex("_t=[0-9a-f]+");
+                Regex friendCodeListRegex = new Regex("friendCodeList=([0-9]+(%2[Cc])?)+");
 
                 IEnumerable<string> cookieHeaders = respMsg.Headers.GetValues("Set-Cookie");
                 foreach(string setCookie in cookieHeaders)
@@ -503,11 +523,17 @@ namespace MaimaiDXRecordSaver
                         string str = match.Value;
                         if (str.Length > 3) _t = str.Substring(3);
                     }
+                    else if((match = friendCodeListRegex.Match(setCookie)).Success)
+                    {
+                        string str = match.Value;
+                        if (str.Length > 15) friendCodeList = str.Substring(15);
+                    }
                 }
                 if(!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(_t))
                 {
                     UserID = userId;
                     TValue = _t;
+                    FriendCodeList = friendCodeList;
                     CredentialCaptured = true;
                     return true;
                 }

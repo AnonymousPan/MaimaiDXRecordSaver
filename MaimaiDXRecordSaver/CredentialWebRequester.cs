@@ -13,8 +13,10 @@ namespace MaimaiDXRecordSaver
     {
         private object userIdLock = new object();
         private object tValueLock = new object();
+        private object friendCodeListLock = new object();
         private string m_userId;
         private string m_tValue;
+        private string m_friendCodeList;
         public string UserID
         {
             get
@@ -32,6 +34,7 @@ namespace MaimaiDXRecordSaver
                 }
             }
         }
+
         public string TValue
         {
             get
@@ -49,6 +52,25 @@ namespace MaimaiDXRecordSaver
                 }
             }
         }
+
+        public string FriendCodeList
+        {
+            get
+            {
+                lock(friendCodeListLock)
+                {
+                    return m_friendCodeList;
+                }
+            }
+            set
+            {
+                lock(friendCodeListLock)
+                {
+                    m_friendCodeList = value;
+                }
+            }
+        }
+
         public string UAString { get; private set; }
 
         private bool running = false;
@@ -58,10 +80,11 @@ namespace MaimaiDXRecordSaver
 
         private ILog logger = LogManager.GetLogger("WebRequester");
 
-        public CredentialWebRequester(string userID, string _t)
+        public CredentialWebRequester(string userID, string _t, string friendCodeList)
         {
             UserID = userID;
             TValue = _t;
+            FriendCodeList = friendCodeList;
             requestQueue = new ConcurrentQueue<Tuple<CredentialWebRequest, AutoResetEvent>>();
                 requesterThread = new Thread(RequesterThreadProc);
             requesterThread.Name = "Credential Web Requester Thread";
@@ -170,21 +193,24 @@ namespace MaimaiDXRecordSaver
                 {
                     CredentialWebRequest req = tuple.Item1;
                     AutoResetEvent waitHandle = tuple.Item2;
+
+                    #if DEBUG
                     string postFlag = req.IsPost ? "[POST] " : "";
                     logger.Debug("正在请求URL: " + postFlag + req.URL);
+                    #endif
 
                     CredentialWebResponse resp = null;
                     HttpWebResponse httpResp = null;
                     try
                     {
-                        HttpWebRequest httpReq = req.CreateHttpWebRequest(UserID, TValue, UAString);
+                        HttpWebRequest httpReq = req.CreateHttpWebRequest(UserID, TValue, UAString, FriendCodeList);
                         httpResp = (HttpWebResponse)httpReq.GetResponse();
                         // Credential invalid
-                        // Got a 302 and location header contains "error"
+                        // Got a 302 and location equals "/maimai-mobile/" (ends with)
                         if (httpResp.StatusCode == HttpStatusCode.Found
-                            && httpResp.Headers[HttpResponseHeader.Location].Contains("error"))
+                            && httpResp.Headers[HttpResponseHeader.Location].EndsWith("/maimai-mobile/"))
                         {
-                            throw new CredentialInvalidException(req.URL, UserID, TValue);
+                            throw new CredentialInvalidException(req.URL, UserID, TValue, FriendCodeList);
                         }
 
                         // Read response content
@@ -219,9 +245,14 @@ namespace MaimaiDXRecordSaver
                         {
                             TValue = tValueCookie.Value;
                         }
-                        if(userIdCookie != null || tValueCookie != null)
+                        Cookie friendCodeListCookie = httpResp.Cookies["friendCodeList"];
+                        if(friendCodeListCookie != null)
                         {
-                            resp.SetCredentialInfo(UserID, TValue);
+                            FriendCodeList = friendCodeListCookie.Value;
+                        }
+                        if(userIdCookie != null || tValueCookie != null || friendCodeListCookie != null)
+                        {
+                            resp.SetCredentialInfo(UserID, TValue, FriendCodeList);
                         }
                     }
                     catch(Exception err)

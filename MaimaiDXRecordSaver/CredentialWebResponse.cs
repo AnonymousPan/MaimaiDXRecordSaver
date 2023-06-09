@@ -16,6 +16,7 @@ namespace MaimaiDXRecordSaver
         public bool CredentialChanged { get; private set; } = false;
         public string NewUserID { get; private set; }
         public string NewTValue { get; private set; }
+        public string NewFriendCodeList { get; private set; }
 
         public bool Failed { get; private set; } = false;
         public Exception Exception { get; private set; }
@@ -48,11 +49,13 @@ namespace MaimaiDXRecordSaver
         /// </summary>
         /// <param name="userId">New userId value</param>
         /// <param name="tValue">New _t value</param>
-        public void SetCredentialInfo(string userId, string tValue)
+        /// <param name="friendCodeList">New friendCodeList</param>
+        public void SetCredentialInfo(string userId, string tValue, string friendCodeList)
         {
             CredentialChanged = true;
             NewUserID = userId;
             NewTValue = tValue;
+            NewFriendCodeList = friendCodeList;
         }
 
         /// <summary>

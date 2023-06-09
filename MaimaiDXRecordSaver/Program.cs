@@ -50,8 +50,8 @@ namespace MaimaiDXRecordSaver
                 }
                 
                 // Load credential
-                string userId, _t;
-                if (LoadCredential(out userId, out _t))
+                string userId, _t, friendCodeList;
+                if (LoadCredential(out userId, out _t, out friendCodeList))
                 {
                     Logger.Info("成功加载登录凭据");
                 }
@@ -60,10 +60,11 @@ namespace MaimaiDXRecordSaver
                     Logger.Warn("未找到已保存的登录凭据");
                     userId = "";
                     _t = "";
+                    friendCodeList = "";
                 }
 
                 // Start credential web requester
-                Requester = new CredentialWebRequester(userId, _t);
+                Requester = new CredentialWebRequester(userId, _t, friendCodeList);
                 Requester.Start();
 
                 // Initialize data recorder
@@ -133,13 +134,6 @@ namespace MaimaiDXRecordSaver
             SaveCredential();
         }
 
-        private static void OnCredentialsChange(string s, string t)
-        {
-            Requester.UserID = s;
-            Requester.TValue = t;
-            Logger.Info(string.Format("OnCredentialChange sessionID={0} _t={1}", s, t));
-        }
-
         private static void ShowWelcomeMessage()
         {
             Console.WriteLine("欢迎使用 MaimaiDXRecordSaver - 一款用于存储maimaiDX游玩记录的工具");
@@ -147,44 +141,40 @@ namespace MaimaiDXRecordSaver
             Console.WriteLine("版本: " + Version);
         }
 
-        public static bool LoadCredential(out string sessionID, out string _t)
+        public static bool LoadCredential(out string userId, out string _t, out string friendCodeList)
         {
             if(File.Exists("LoginCredential.txt"))
             {
                 try
                 {
                     string[] lines = File.ReadAllLines("LoginCredential.txt");
-                    sessionID = lines[0];
+                    userId = lines[0];
                     _t = lines[1];
+                    friendCodeList = lines[2];
                     return true;
                 }
                 catch(Exception err)
                 {
                     Logger.Warn("无法读取已保存的登录凭据\n" + err.ToString());
-                    sessionID = "";
-                    _t = "";
-                    return false;
                 }
             }
-            else
-            {
-                sessionID = "";
-                _t = "";
-                return false;
-            }
+            userId = "";
+            _t = "";
+            friendCodeList = "";
+            return false;
         }
 
         public static void SaveCredential()
         {
             if(Requester != null)
             {
-                SaveCredential(Requester.UserID, Requester.TValue);
+                SaveCredential(Requester.UserID, Requester.TValue, Requester.FriendCodeList);
             }
         }
 
-        public static void SaveCredential(string sessionID, string _t)
+        public static void SaveCredential(string sessionID, string _t, string friendCodeList)
         {
-            string str = sessionID + "\n" + _t;
+            string str = sessionID + "\n" + _t + "\n" + friendCodeList + "\n";
             File.WriteAllText("LoginCredential.txt", str);
             Logger.Info("登录凭据已保存");
         }
@@ -233,6 +223,7 @@ namespace MaimaiDXRecordSaver
                     Console.WriteLine("微信登录成功(不要忘记改回代理设置)");
                     Requester.UserID = wechatLoginProxy.UserID;
                     Requester.TValue = wechatLoginProxy.TValue;
+                    Requester.FriendCodeList = wechatLoginProxy.FriendCodeList;
                     SaveCredential();
                     return;
                 }

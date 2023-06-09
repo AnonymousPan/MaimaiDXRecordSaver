@@ -85,7 +85,13 @@ namespace MaimaiDXRecordSaver
                         reqUrl = url;
                         string lowerUrl = url.ToLower();
 
-                        if(!ConfigManager.Instance.WebPageProxyAllowLogout.Value
+                        // Request "/maimai-mobile" directly will invalidate current login credential
+                        if(lowerUrl.EndsWith("/maimai-mobile/")
+                            || lowerUrl.EndsWith("/maimai-mobile"))
+                        {
+                            ProcessReq_TempRedir("/maimai-mobile/home/");
+                        }
+                        else if(!ConfigManager.Instance.WebPageProxyAllowLogout.Value
                             && lowerUrl.Contains("logout")
                             && lowerUrl.Contains("maimai-mobile"))
                         {
@@ -157,7 +163,8 @@ namespace MaimaiDXRecordSaver
             {
                 index += 15; // Length of "/maimai-mobile/"
                 string str = url.Substring(index);
-                if (str.StartsWith("img/Icon/")) return true;
+                if (str == "img/Icon/") return true;
+                if (str.StartsWith("img/Icon/friend/")) return true;
                 if (str.StartsWith("img/photo/")) return true;
                 if (str.StartsWith("apple-touch-icon.png")) return false;
                 return !str.StartsWith("img/") && !str.StartsWith("js/") && !str.StartsWith("css/");

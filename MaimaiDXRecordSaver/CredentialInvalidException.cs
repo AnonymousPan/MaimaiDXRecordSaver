@@ -9,6 +9,7 @@ namespace MaimaiDXRecordSaver
     {
         public string SessionID { get; set; }
         public string TValue { get; set; }
+        public string FriendCodeList { get; set; }
         public string RequestedURL { get; set; }
 
         public CredentialInvalidException() { }
@@ -18,17 +19,19 @@ namespace MaimaiDXRecordSaver
             RequestedURL = url;
         }
 
-        public CredentialInvalidException(string sessionID, string _t)
+        public CredentialInvalidException(string sessionID, string _t, string friendCodeList)
         {
             SessionID = sessionID;
             TValue = _t;
+            FriendCodeList = friendCodeList;
         }
 
-        public CredentialInvalidException(string url, string sessionID, string _t)
+        public CredentialInvalidException(string url, string sessionID, string _t, string friendCodeList)
         {
             RequestedURL = url;
             SessionID = sessionID;
             TValue = _t;
+            FriendCodeList = friendCodeList;
         }
     }
 }
